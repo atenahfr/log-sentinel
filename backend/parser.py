@@ -1,4 +1,5 @@
 import re
+import pandas as pd
 
 LOG_PATTERN = re.compile(
     r'(\d+\.\d+\.\d+\.\d+)'   # IP address
@@ -29,6 +30,12 @@ def parse_log_file(filepath):
                 })
 
     return results
+
+def load_log_dataframe(filepath):
+    enteries = parse_log_file(filepath)
+    df = pd.DataFrame(enteries)
+    df['timestamp'] = pd.to_datetime(df['timestamp'], format='%d/%b/%Y:%H:%M:%S %z')
+    return df
 
 
 if __name__ == '__main__':
