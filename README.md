@@ -32,8 +32,7 @@ Built by **Atena Hosseinifar** · Toronto Metropolitan University · CS
 ---
 
 ## Project Structure
----
-
+```
 log-sentinel/
 ├── backend/
 │   ├── parser.py      # Parses raw log files into structured data
@@ -44,8 +43,7 @@ log-sentinel/
 ├── frontend/          # Dashboard (HTML/CSS/JS)
 ├── tests/             # Unit tests
 └── data/              # Log files (gitignored)
-
----
+```
 
 ## How to run locally
 
