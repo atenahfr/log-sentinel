@@ -1,30 +1,49 @@
 # Log Sentinel 🔍
+### Log Analysis Dashboard with Anomaly Detection
 
-A cybersecurity log analysis dashboard with anomaly detection.
+![Python](https://img.shields.io/badge/Python-3.12-blue)
+![Flask](https://img.shields.io/badge/Flask-3.1-green)
+![Status](https://img.shields.io/badge/Status-In%20Progress-orange)
 
-Built by Atena Hosseinifar · Toronto Metropolitan University · CS
+A cybersecurity tool that parses server access logs, detects suspicious patterns, scores threats by risk level, and displays everything on an interactive dashboard.
 
-## What it does
+Built by **Atena Hosseinifar** · Toronto Metropolitan University · CS Year 3
 
-Log Sentinel parses server access logs, detects suspicious patterns (brute force attacks,
-error spikes, off-hours traffic), scores threats by risk level, and displays everything
-on an interactive dashboard.
+---
+
+## What it detects
+
+- 🔴 **Brute force attacks** — repeated failed login attempts from the same IP
+- 🟠 **Directory scanning** — IPs probing for hidden pages like `/admin`, `/.env`, `/config.php`
+- 🟡 **Error spikes** — unusual surges in 404 or 500 errors
+- 🔵 **Off-hours traffic** — suspicious requests at 2am–4am from unknown IPs
+
+---
 
 ## Tech Stack
 
-- **Backend:** Python · Flask · pandas · scikit-learn
-- **Frontend:** HTML/CSS/JS · Chart.js · Tailwind CSS
-- **Data:** Apache/Nginx access logs (EDGAR dataset)
+| Layer | Technology |
+|-------|-----------|
+| Backend | Python 3.12, Flask 3.1, pandas, scikit-learn |
+| Frontend | HTML/CSS/JS, Chart.js, Tailwind CSS |
+| Data | Apache access log format |
+| Deployment | Render (backend), GitHub Pages (frontend) |
 
-## Project Status
+---
 
-🔨 Day 1 of 38 — Environment setup complete
+## Project Structure
+log-sentinel/
+├── backend/
+│   ├── parser.py      # Parses raw log files into structured data
+│   ├── detector.py    # Anomaly detection logic
+│   ├── scorer.py      # Risk scoring system
+│   ├── report.py      # Report generation
+│   └── app.py         # Flask API
+├── frontend/          # Dashboard (HTML/CSS/JS)
+├── tests/             # Unit tests
+└── data/              # Log files (gitignored)
 
-## Progress Log
-
-| Day | What I built |
-|-----|-------------|
-| 1   | Dev environment, project structure, GitHub setup |
+---
 
 ## How to run locally
 
@@ -34,8 +53,39 @@ cd log-sentinel
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+python3 backend/app.py
 ```
 
-## Live Demo
+---
 
-Coming soon.
+## Progress Log
+
+| Day | What I built |
+|-----|-------------|
+| 1 | Dev environment, project structure, GitHub setup |
+| 2 | Studied Apache log format, created sample log file |
+| 3 | Log parser with regex — extracts IP, timestamp, method, path, status, bytes |
+| 4 | Loaded logs into pandas DataFrame, exploratory data analysis |
+| 5 | Clean README, requirements.txt, documentation habits |
+
+---
+
+## What I learned so far
+
+- How Apache access logs are structured and what each field means
+- How to use regex to extract structured data from raw text
+- How pandas DataFrames work for data analysis
+- How to spot brute force and scanning patterns just by reading log data
+
+---
+
+## Live Demo
+Coming on Day 33 after deployment.
+
+---
+
+## Future improvements
+- ML-based anomaly detection with Isolation Forest
+- Real-time log streaming with WebSockets
+- SQLite database for analysis history
+- SSH auth.log support

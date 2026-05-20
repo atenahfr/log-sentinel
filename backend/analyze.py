@@ -1,3 +1,7 @@
+#backend/analyze.py
+#day 4 exploratory analysis - not part of the main app
+#Run directory to inspect log data: python3 backend/analyze.py
+
 from parser import load_log_dataframe
 
 df = load_log_dataframe('data/sample.log')
