@@ -7,7 +7,7 @@
 
 A cybersecurity tool that parses server access logs, detects suspicious patterns, scores threats by risk level, and displays everything on an interactive dashboard.
 
-Built by **Atena Hosseinifar** · Toronto Metropolitan University · CS Year 3
+Built by **Atena Hosseinifar** · Toronto Metropolitan University · CS 
 
 ---
 
@@ -32,6 +32,8 @@ Built by **Atena Hosseinifar** · Toronto Metropolitan University · CS Year 3
 ---
 
 ## Project Structure
+---
+
 log-sentinel/
 ├── backend/
 │   ├── parser.py      # Parses raw log files into structured data
@@ -68,19 +70,10 @@ python3 backend/app.py
 | 4 | Loaded logs into pandas DataFrame, exploratory data analysis |
 | 5 | Clean README, requirements.txt, documentation habits |
 
----
 
-## What I learned so far
-
-- How Apache access logs are structured and what each field means
-- How to use regex to extract structured data from raw text
-- How pandas DataFrames work for data analysis
-- How to spot brute force and scanning patterns just by reading log data
-
----
 
 ## Live Demo
-Coming on Day 33 after deployment.
+Coming soon...
 
 ---
 
