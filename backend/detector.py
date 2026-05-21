@@ -27,6 +27,14 @@ def detect_brute_force(df, threshold=10):
 
     # Step 4: add a label so we know what type of anomaly this is
     flagged['anomaly_type'] = 'brute_force'
+    
+    flagged['explanation'] = flagged['failed_attempts'].apply(
+    lambda count: (
+        f"This IP made {count} failed login attempts on /login. "
+        f"Normal users fail 1-2 times at most. "
+        f"This volume strongly suggests an automated brute force attack."
+    )
+)
 
     return flagged
 
@@ -54,6 +62,14 @@ def detect_404_spike(df, threshold=10):
     # Flag IPs over threshold
     flagged = ip_counts[ip_counts['error_count'] > threshold].copy()
     flagged['anomaly_type'] = '404_spike'
+    
+    flagged['explanation'] = flagged['error_count'].apply(
+    lambda count: (
+        f"This IP triggered {count} 'page not found' errors. "
+        f"This pattern suggests automated directory scanning — "
+        f"probing for hidden files like /admin, /.env, or /config.php."
+    )
+)
 
     return flagged
 
@@ -82,7 +98,14 @@ def detect_500_spike(df, threshold=5):
     # Flag IPs over threshold
     flagged = ip_counts[ip_counts['error_count'] > threshold].copy()
     flagged['anomaly_type'] = '500_spike'
-
+    
+    flagged['explanation'] = flagged['error_count'].apply(
+    lambda count: (
+        f"This IP caused {count} internal server errors. "
+        f"Repeated 500 errors from one IP suggest malformed requests "
+        f"or a possible injection attempt."
+    )
+)
     return flagged
 
 
