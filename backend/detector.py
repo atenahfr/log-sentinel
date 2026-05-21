@@ -30,6 +30,61 @@ def detect_brute_force(df, threshold=10):
 
     return flagged
 
+def detect_404_spike(df, threshold=10):
+    """
+    Detects directory scanning attacks.
+    
+    A 404 spike = same IP getting many 'page not found' responses.
+    This usually means someone is probing for hidden files and admin pages.
+    
+    Args:
+        df: pandas DataFrame from parser.py
+        threshold: how many 404s before we flag an IP (default 10)
+    
+    Returns:
+        A DataFrame of flagged IPs with their 404 counts
+    """
+
+    # Filter for 404 responses only
+    not_found = df[df['status_code'] == 404]
+
+    # Count 404s per IP
+    ip_counts = not_found.groupby('ip').size().reset_index(name='error_count')
+
+    # Flag IPs over threshold
+    flagged = ip_counts[ip_counts['error_count'] > threshold].copy()
+    flagged['anomaly_type'] = '404_spike'
+
+    return flagged
+
+
+def detect_500_spike(df, threshold=5):
+    """
+    Detects server error spikes.
+    
+    A 500 spike = same IP triggering many server errors.
+    This could mean someone is sending malformed requests or attempting injection.
+    
+    Args:
+        df: pandas DataFrame from parser.py
+        threshold: how many 500s before we flag an IP (default 5)
+    
+    Returns:
+        A DataFrame of flagged IPs with their 500 counts
+    """
+
+    # Filter for 500 responses only
+    server_errors = df[df['status_code'] == 500]
+
+    # Count 500s per IP
+    ip_counts = server_errors.groupby('ip').size().reset_index(name='error_count')
+
+    # Flag IPs over threshold
+    flagged = ip_counts[ip_counts['error_count'] > threshold].copy()
+    flagged['anomaly_type'] = '500_spike'
+
+    return flagged
+
 
 if __name__ == '__main__':
     import sys
@@ -37,8 +92,18 @@ if __name__ == '__main__':
     from parser import load_log_dataframe
 
     df = load_log_dataframe('data/sample.log')
-    result = detect_brute_force(df)
 
-    print("=== BRUTE FORCE DETECTION RESULTS ===")
-    print(result)
-    print(f"\n{len(result)} IP(s) flagged for brute force")
+    print("=== BRUTE FORCE DETECTION ===")
+    bf = detect_brute_force(df)
+    print(bf)
+    print(f"{len(bf)} IP(s) flagged\n")
+
+    print("=== 404 SPIKE DETECTION ===")
+    s404 = detect_404_spike(df)
+    print(s404)
+    print(f"{len(s404)} IP(s) flagged\n")
+
+    print("=== 500 SPIKE DETECTION ===")
+    s500 = detect_500_spike(df)
+    print(s500)
+    print(f"{len(s500)} IP(s) flagged\n")
