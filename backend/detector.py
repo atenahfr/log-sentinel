@@ -108,6 +108,51 @@ def detect_500_spike(df, threshold=5):
 )
     return flagged
 
+def detect_off_hours_traffic(df, std_multiplier=2):
+    """
+    Detects statistically abnormal traffic hours.
+    
+    Calculates the mean and standard deviation of requests per hour.
+    Flags any hour where traffic exceeds mean + (std_multiplier * std_dev).
+    Also flags any activity between midnight and 6am as inherently suspicious.
+    
+    Args:
+        df: pandas DataFrame from parser.py
+        std_multiplier: how many standard deviations above mean = suspicious (default 2)
+    
+    Returns:
+        A DataFrame of flagged hours with request counts and explanations
+    """
+
+    # Step 1: count requests per hour
+    df['hour'] = df['timestamp'].dt.hour
+    requests_per_hour = df.groupby('hour').size().reset_index(name='request_count')
+
+    # Step 2: calculate mean and standard deviation
+    mean = requests_per_hour['request_count'].mean()
+    std  = requests_per_hour['request_count'].std()
+
+    # Step 3: calculate the threshold
+    threshold = mean + (std_multiplier * std)
+
+    # Step 4: flag hours that exceed the threshold OR are off-hours (midnight to 6am)
+    flagged = requests_per_hour[
+        (requests_per_hour['request_count'] > threshold) |
+        (requests_per_hour['hour'] < 6)
+    ].copy()
+
+    # Step 5: add anomaly type and explanation
+    flagged['anomaly_type'] = 'off_hours_traffic'
+    flagged['explanation'] = flagged.apply(
+        lambda row: (
+            f"Hour {row['hour']}:00 had {row['request_count']} requests. "
+            f"The daily average is {mean:.1f} requests/hour (threshold: {threshold:.1f}). "
+            f"{'This hour falls in the suspicious 2am-6am window.' if row['hour'] < 6 else 'This exceeds the statistical threshold by more than 2 standard deviations.'}"
+        ), axis=1
+    )
+
+    return flagged
+
 
 if __name__ == '__main__':
     import sys
@@ -130,3 +175,8 @@ if __name__ == '__main__':
     s500 = detect_500_spike(df)
     print(s500)
     print(f"{len(s500)} IP(s) flagged\n")
+    
+    print("=== OFF HOURS / STATISTICAL ANOMALY DETECTION ===")
+    offhours = detect_off_hours_traffic(df)
+    print(offhours[['hour', 'request_count', 'anomaly_type']])
+    print(f"\n{len(offhours)} hour(s) flagged\n")
