@@ -1,4 +1,4 @@
-# Log Sentinel 🔍
+# Log Sentinel 
 ### Log Analysis Dashboard with Anomaly Detection
 
 ![Python](https://img.shields.io/badge/Python-3.12-blue)
@@ -44,6 +44,7 @@ log-sentinel/
 ├── tests/             # Unit tests
 └── data/              # Log files (gitignored)
 ```
+---
 
 ## How to run locally
 
@@ -58,16 +59,67 @@ python3 backend/app.py
 
 ---
 
-## Progress Log
 
-| Day | What I built |
-|-----|-------------|
-| 1 | Dev environment, project structure, GitHub setup |
-| 2 | Studied Apache log format, created sample log file |
-| 3 | Log parser with regex — extracts IP, timestamp, method, path, status, bytes |
-| 4 | Loaded logs into pandas DataFrame, exploratory data analysis |
-| 5 | Clean README, requirements.txt, documentation habits |
+## API Endpoints
 
+Base URL (local): `http://127.0.0.1:5000`
+
+### GET /api/health
+Verify the server is running.
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "message": "Log Sentinel API is running"
+}
+```
+
+### POST /api/analyze
+Upload a log file and run the full analysis pipeline.
+
+**Request:** multipart/form-data with field `file` (.log or .txt, max 16MB)
+
+**Response:** complete analysis report including summary, anomalies, timeline, and scores.
+
+**Errors:**
+- `400` — missing file, empty file, or wrong file type
+- `413` — file exceeds 16MB
+- `422` — file is correct type but not valid log format
+- `500` — unexpected server error
+
+### GET /api/summary
+Returns summary stats from the last analysis.
+
+**Response:**
+```json
+{
+  "total_requests": 360,
+  "unique_ips": 6,
+  "total_anomalies": 5,
+  "overall_risk": 240,
+  "time_range_start": "2024-05-15 02:00:00+00:00",
+  "time_range_end": "2024-05-15 17:58:23+00:00"
+}
+```
+
+### GET /api/anomalies
+Returns all flagged anomalies sorted by risk score.
+
+**Response:** anomaly_counts, all_scores, top_offenders
+
+### GET /api/timeline
+Returns requests-per-hour data for the timeline chart.
+
+**Response:**
+```json
+{
+  "timeline": [
+    {"hour": 2, "count": 40},
+    {"hour": 3, "count": 25}
+  ]
+}
+```
 
 
 ## Live Demo
