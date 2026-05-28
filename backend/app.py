@@ -21,6 +21,10 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Only accept these file extensions
 ALLOWED_EXTENSIONS = {'.log', '.txt'}
 
+# In-memory store for the last analysis result
+# This lets supporting endpoints access the data without re-running analysis
+last_report = None
+
 
 def allowed_file(filename):
     """
@@ -54,51 +58,103 @@ def analyze():
     Main analysis endpoint.
 
     Accepts a log file upload, runs the full analysis pipeline,
-    and returns a JSON report.
+    and returns a JSON report. Also stores the result for other endpoints.
 
     Returns:
         200: analysis report as JSON
         400: bad request (missing file, wrong type, empty file)
         500: analysis failed
     """
+    global last_report
 
-    # Step 1: check that a file was actually included in the request
+    # Check that a file was actually included in the request
     if 'file' not in request.files:
         return jsonify({'error': 'No file uploaded'}), 400
 
     file = request.files['file']
 
-    # Step 2: check that the file has a name
+    # Check that the file has a name
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
 
-    # Step 3: check the file extension
+    # Check the file extension
     if not allowed_file(file.filename):
         return jsonify({'error': 'Invalid file type. Only .log and .txt files are accepted'}), 400
 
-    # Step 4: save the file temporarily with a unique name
-    # uuid4() generates a random unique ID — prevents filename collisions
+    # Save the file temporarily with a unique name
     unique_filename = f"{uuid.uuid4().hex}.log"
     filepath = os.path.join(UPLOAD_FOLDER, unique_filename)
     file.save(filepath)
 
-    # Step 5: check the file isn't empty
+    # Check the file isn't empty
     if os.path.getsize(filepath) == 0:
         os.remove(filepath)
         return jsonify({'error': 'Uploaded file is empty'}), 400
 
-    # Step 6: run the analysis
+    # Run the analysis
     try:
         report = generate_report(filepath)
+        last_report = report
         return jsonify(report), 200
 
     except Exception as e:
         return jsonify({'error': f'Analysis failed: {str(e)}'}), 500
 
     finally:
-        # Step 7: always delete the temp file, even if analysis failed
+        # Always delete the temp file, even if analysis failed
         if os.path.exists(filepath):
             os.remove(filepath)
+
+
+@app.route('/api/summary', methods=['GET'])
+def summary():
+    """
+    Returns just the summary section of the last analysis.
+
+    Returns:
+        200: summary dict with total_requests, unique_ips, etc.
+        404: no analysis has been run yet
+    """
+    if last_report is None:
+        return jsonify({'error': 'No analysis run yet. Upload a log file first.'}), 404
+
+    return jsonify(last_report['summary']), 200
+
+
+@app.route('/api/anomalies', methods=['GET'])
+def anomalies():
+    """
+    Returns all scored anomalies from the last analysis.
+
+    Returns:
+        200: list of anomaly objects sorted by risk score
+        404: no analysis has been run yet
+    """
+    if last_report is None:
+        return jsonify({'error': 'No analysis run yet. Upload a log file first.'}), 404
+
+    return jsonify({
+        'anomaly_counts': last_report['anomaly_counts'],
+        'all_scores':     last_report['all_scores'],
+        'top_offenders':  last_report['top_offenders'],
+    }), 200
+
+
+@app.route('/api/timeline', methods=['GET'])
+def timeline():
+    """
+    Returns the requests-per-hour timeline from the last analysis.
+
+    Returns:
+        200: list of {hour, count} objects
+        404: no analysis has been run yet
+    """
+    if last_report is None:
+        return jsonify({'error': 'No analysis run yet. Upload a log file first.'}), 404
+
+    return jsonify({
+        'timeline': last_report['timeline']
+    }), 200
 
 
 if __name__ == '__main__':
