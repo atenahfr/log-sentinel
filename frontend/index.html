@@ -4,18 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Log Sentinel — Log Analysis Dashboard</title>
-
-  <!-- Tailwind CSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Google Fonts: monospace for terminal feel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
 
   <style>
-    /* ── Core terminal theme ── */
     :root {
       --green:      #00ff88;
-      --green-dim:  #00ff8844;
+      --green-dim:  #00ff8822;
       --green-mid:  #00ff8899;
       --red:        #ff4444;
       --amber:      #ffaa00;
@@ -25,7 +21,7 @@
       --bg-hover:   #1a1a1a;
       --border:     #00ff8822;
       --border-mid: #00ff8844;
-      --text-dim:   #666666;
+      --text-dim:   #555555;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -37,64 +33,138 @@
       overflow-x: hidden;
     }
 
-    /* ── Scanline overlay for terminal feel ── */
+    /* Scanline overlay */
     body::before {
       content: '';
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
       background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0, 255, 136, 0.015) 2px,
-        rgba(0, 255, 136, 0.015) 4px
+        0deg, transparent, transparent 2px,
+        rgba(0,255,136,0.015) 2px,
+        rgba(0,255,136,0.015) 4px
       );
       pointer-events: none;
-      z-index: 999;
+      z-index: 998;
     }
 
-    /* ── Blinking cursor animation ── */
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: 0; }
-    }
-    .cursor::after {
-      content: '█';
-      animation: blink 1s infinite;
-      margin-left: 2px;
+    /* Matrix canvas behind hero */
+    #matrixCanvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      opacity: 0.15;
+      z-index: 0;
     }
 
-    /* ── Typing animation ── */
-    @keyframes typing {
-      from { width: 0; }
-      to   { width: 100%; }
-    }
+    #hero { position: relative; overflow: hidden; }
+    .hero-content { position: relative; z-index: 1; }
 
-    /* ── Glow effect ── */
+    /* Blinking cursor */
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    .cursor::after { content:'█'; animation: blink 1s infinite; margin-left:2px; }
+
+    /* Glow */
     .glow {
       text-shadow: 0 0 10px var(--green),
                    0 0 20px var(--green),
                    0 0 40px var(--green);
     }
 
-    /* ── Card style ── */
+    /* Pulse border animation */
+    @keyframes pulse-border {
+      0%,100% { border-color: #00ff8833; }
+      50%      { border-color: #00ff88aa; }
+    }
+
+    /* Cards */
     .card {
       background: var(--bg-card);
       border: 1px solid var(--border-mid);
       padding: 1.25rem;
     }
 
-    /* ── Stat card ── */
     .stat-card {
       background: var(--bg-card);
       border: 1px solid var(--border-mid);
       padding: 1.25rem;
-      transition: border-color 0.2s;
+      transition: border-color 0.2s, transform 0.2s;
     }
-    .stat-card:hover { border-color: var(--green); }
+    .stat-card:hover { border-color: var(--green); transform: translateY(-2px); }
 
-    /* ── Table styles ── */
+    /* Step cards with hover lift */
+    .step-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-mid);
+      padding: 1.75rem;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .step-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 3px; height: 0;
+      background: var(--green);
+      transition: height 0.3s;
+    }
+    .step-card:hover { border-color: var(--green); transform: translateY(-4px); }
+    .step-card:hover::before { height: 100%; }
+
+    /* Upload zone */
+    .upload-zone {
+      border: 2px dashed #00ff8844;
+      padding: 3rem;
+      text-align: center;
+      transition: all 0.3s;
+      cursor: pointer;
+      position: relative;
+      animation: pulse-border 3s infinite;
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--green);
+      background: #00ff8808;
+      animation: none;
+    }
+
+    /* Scan line animation */
+    @keyframes scan {
+      0%   { top: 0; opacity: 1; }
+      100% { top: 100%; opacity: 0; }
+    }
+    .scan-line {
+      position: absolute;
+      left: 0; top: 0;
+      width: 100%; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--green), transparent);
+      animation: scan 2s linear infinite;
+      display: none;
+    }
+    .upload-zone.scanning .scan-line { display: block; }
+
+    /* Button */
+    .btn-primary {
+      background: transparent;
+      border: 1px solid var(--green);
+      color: var(--green);
+      padding: 0.75rem 2rem;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.9rem;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+    }
+    .btn-primary:hover { background: var(--green); color: #0a0a0a; }
+    .btn-primary:disabled { opacity: 0.3; cursor: not-allowed; }
+    .btn-primary:disabled:hover { background: transparent; color: var(--green); }
+
+    /* Count up animation */
+    @keyframes countup { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .stat-value { animation: countup 0.5s ease forwards; }
+
+    /* Table */
     .sentinel-table { width: 100%; border-collapse: collapse; }
     .sentinel-table th {
       color: var(--text-dim);
@@ -112,7 +182,15 @@
     }
     .sentinel-table tr:hover td { background: var(--bg-hover); cursor: pointer; }
 
-    /* ── Severity badges ── */
+    /* Row flicker in */
+    @keyframes flicker-in {
+      0%   { opacity: 0; background: #00ff8811; }
+      50%  { opacity: 0.5; }
+      100% { opacity: 1; background: transparent; }
+    }
+    .row-flicker { animation: flicker-in 0.4s ease forwards; }
+
+    /* Badges */
     .badge {
       display: inline-block;
       padding: 2px 8px;
@@ -125,204 +203,217 @@
     .badge-medium   { color: #ffaa00; border-color: #ffaa0088; }
     .badge-low      { color: #4488ff; border-color: #4488ff88; }
 
-    /* ── Upload zone ── */
-    .upload-zone {
-      border: 2px dashed var(--border-mid);
-      padding: 3rem;
-      text-align: center;
-      transition: all 0.2s;
-      cursor: pointer;
-    }
-    .upload-zone:hover,
-    .upload-zone.dragover {
-      border-color: var(--green);
-      background: var(--green-dim);
-    }
-
-    /* ── Button ── */
-    .btn-primary {
-      background: transparent;
-      border: 1px solid var(--green);
-      color: var(--green);
-      padding: 0.75rem 2rem;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 0.9rem;
-      letter-spacing: 2px;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-transform: uppercase;
-    }
-    .btn-primary:hover {
-      background: var(--green);
-      color: #0a0a0a;
-    }
-    .btn-primary:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-
-    /* ── Side panel ── */
+    /* Side panel */
     .side-panel {
       position: fixed;
-      top: 0; right: -480px;
-      width: 480px;
-      height: 100vh;
+      top: 0; right: -520px;
+      width: 520px; height: 100vh;
       background: #0d0d0d;
       border-left: 1px solid var(--border-mid);
       padding: 2rem;
       overflow-y: auto;
-      transition: right 0.3s ease;
-      z-index: 100;
+      transition: right 0.35s cubic-bezier(0.4,0,0.2,1);
+      z-index: 200;
     }
     .side-panel.open { right: 0; }
 
-    /* ── Scrollbar ── */
-    ::-webkit-scrollbar       { width: 4px; }
+    /* Overlay behind side panel */
+    .panel-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 199;
+      display: none;
+    }
+    .panel-overlay.active { display: block; }
+
+    /* Terminal log lines */
+    .log-line {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      padding: 2px 0;
+      border-bottom: 1px solid #ffffff08;
+    }
+    .log-line span { color: var(--green); }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
     ::-webkit-scrollbar-thumb { background: var(--border-mid); }
+
+    /* Corner brackets */
+    .corner { position: fixed; font-size: 1rem; color: #00ff8833; z-index: 999; }
   </style>
 </head>
 
 <body>
 
-  <!-- ─────────────────────────────────────────
-       SECTION 1: HERO
-  ───────────────────────────────────────── -->
+  <!-- Corner brackets -->
+  <div class="corner" style="top:12px;left:12px">┌─</div>
+  <div class="corner" style="top:12px;right:12px">─┐</div>
+  <div class="corner" style="bottom:12px;left:12px">└─</div>
+  <div class="corner" style="bottom:12px;right:12px">─┘</div>
+
+  <!-- ── HERO ── -->
   <section id="hero" class="min-h-screen flex flex-col items-center justify-center px-6 text-center">
+    <canvas id="matrixCanvas"></canvas>
 
-    <div class="mb-4 text-xs tracking-widest" style="color: var(--text-dim);">
-      [ SYSTEM INITIALIZED ]
+    <div class="hero-content">
+      <div class="text-xs tracking-widest mb-6" style="color:var(--text-dim)">
+        [ SYSTEM INITIALIZED · LOG SENTINEL v1.0 ]
+      </div>
+
+      <h1 class="text-7xl font-bold mb-6 glow" id="heroTitle" style="letter-spacing:8px">
+        LOG SENTINEL
+      </h1>
+
+      <div class="text-lg mb-3" style="color:var(--green-mid)">
+        Log Analysis Dashboard with Anomaly Detection
+      </div>
+
+      <div class="text-sm mb-4" style="color:var(--text-dim)">
+        ── Brute Force &nbsp;·&nbsp; Dir Scanning &nbsp;·&nbsp; Error Spikes &nbsp;·&nbsp; Off-Hours Traffic ──
+      </div>
+
+      <!-- Animated terminal lines -->
+      <div class="text-xs mb-10 text-left inline-block" style="color:var(--text-dim);min-width:320px">
+        <div id="termLine1" style="overflow:hidden;white-space:nowrap;width:0">$ initializing detection modules...</div>
+        <div id="termLine2" style="overflow:hidden;white-space:nowrap;width:0;color:var(--green)">✓ parser.py loaded</div>
+        <div id="termLine3" style="overflow:hidden;white-space:nowrap;width:0;color:var(--green)">✓ detector.py loaded</div>
+        <div id="termLine4" style="overflow:hidden;white-space:nowrap;width:0;color:var(--green)">✓ scorer.py loaded</div>
+        <div id="termLine5" style="overflow:hidden;white-space:nowrap;width:0">$ ready. awaiting log file input_<span style="animation:blink 1s infinite;display:inline-block">█</span></div>
+      </div>
+
+      <div>
+        <a href="#upload">
+          <button class="btn-primary">[ INITIALIZE ] ▼</button>
+        </a>
+      </div>
     </div>
-
-    <h1 class="text-6xl font-bold mb-4 glow cursor">LOG SENTINEL</h1>
-
-    <p class="text-xl mb-2" style="color: var(--green-mid);">
-      Log Analysis Dashboard with Anomaly Detection
-    </p>
-
-    <p class="text-sm mb-12" style="color: var(--text-dim); max-width: 500px;">
-      Parse server logs · Detect attacks · Score threats · Visualize everything
-    </p>
-
-    <a href="#how-it-works">
-      <button class="btn-primary">[ INITIALIZE ] ▼</button>
-    </a>
-
-    <!-- Decorative corner brackets -->
-    <div class="fixed top-4 left-4 text-xs" style="color: var(--border-mid);">┌─</div>
-    <div class="fixed top-4 right-4 text-xs" style="color: var(--border-mid);">─┐</div>
-    <div class="fixed bottom-4 left-4 text-xs" style="color: var(--border-mid);">└─</div>
-    <div class="fixed bottom-4 right-4 text-xs" style="color: var(--border-mid);">─┘</div>
   </section>
 
-  <!-- ─────────────────────────────────────────
-       SECTION 2: HOW IT WORKS
-  ───────────────────────────────────────── -->
+  <!-- ── HOW IT WORKS ── -->
   <section id="how-it-works" class="py-24 px-6 max-w-5xl mx-auto">
-
-    <div class="text-xs tracking-widest mb-2" style="color: var(--text-dim);">&gt; PROTOCOL</div>
-    <h2 class="text-3xl mb-12">HOW IT WORKS</h2>
+    <div class="text-xs tracking-widest mb-2" style="color:var(--text-dim)">&gt; PROTOCOL</div>
+    <h2 class="text-3xl mb-2" style="letter-spacing:4px">HOW IT WORKS</h2>
+    <div class="text-xs mb-12" style="color:var(--text-dim)">─────────────────────────────────</div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-
-      <div class="card">
-        <div class="text-4xl mb-4" style="color: var(--text-dim);">01</div>
-        <div class="text-lg mb-2">UPLOAD</div>
-        <p class="text-sm" style="color: var(--text-dim);">
+      <div class="step-card">
+        <div class="text-5xl mb-4" style="color:#00ff8822">01</div>
+        <div class="text-lg mb-3" style="letter-spacing:3px">UPLOAD</div>
+        <p class="text-sm leading-relaxed" style="color:var(--text-dim)">
           Drop your Apache or Nginx access log file. Supports .log and .txt formats up to 16MB.
         </p>
+        <div class="mt-4 text-xs" style="color:var(--border-mid)">[ .log · .txt · max 16MB ]</div>
       </div>
 
-      <div class="card">
-        <div class="text-4xl mb-4" style="color: var(--text-dim);">02</div>
-        <div class="text-lg mb-2">ANALYZE</div>
-        <p class="text-sm" style="color: var(--text-dim);">
-          Four detection algorithms scan for brute force, scanning, error spikes, and off-hours traffic.
+      <div class="step-card">
+        <div class="text-5xl mb-4" style="color:#00ff8822">02</div>
+        <div class="text-lg mb-3" style="letter-spacing:3px">ANALYZE</div>
+        <p class="text-sm leading-relaxed" style="color:var(--text-dim)">
+          Four detection algorithms scan for brute force, directory scanning, error spikes, and off-hours traffic.
         </p>
+        <div class="mt-4 text-xs" style="color:var(--border-mid)">[ 4 detectors · auto-scored ]</div>
       </div>
 
-      <div class="card">
-        <div class="text-4xl mb-4" style="color: var(--text-dim);">03</div>
-        <div class="text-lg mb-2">REVIEW</div>
-        <p class="text-sm" style="color: var(--text-dim);">
+      <div class="step-card">
+        <div class="text-5xl mb-4" style="color:#00ff8822">03</div>
+        <div class="text-lg mb-3" style="letter-spacing:3px">REVIEW</div>
+        <p class="text-sm leading-relaxed" style="color:var(--text-dim)">
           Every threat is scored, ranked, and explained in plain English so you know exactly what happened.
         </p>
+        <div class="mt-4 text-xs" style="color:var(--border-mid)">[ risk scored · explained ]</div>
       </div>
-
     </div>
   </section>
 
-  <!-- ─────────────────────────────────────────
-       SECTION 3: UPLOAD ZONE
-  ───────────────────────────────────────── -->
+  <!-- ── UPLOAD ── -->
   <section id="upload" class="py-24 px-6 max-w-3xl mx-auto">
-
-    <div class="text-xs tracking-widest mb-2" style="color: var(--text-dim);">&gt; INPUT</div>
-    <h2 class="text-3xl mb-12">UPLOAD LOG FILE</h2>
+    <div class="text-xs tracking-widest mb-2" style="color:var(--text-dim)">&gt; INPUT</div>
+    <h2 class="text-3xl mb-2" style="letter-spacing:4px">UPLOAD LOG FILE</h2>
+    <div class="text-xs mb-12" style="color:var(--text-dim)">─────────────────────────────────</div>
 
     <div class="upload-zone" id="uploadZone">
-      <div class="text-4xl mb-4">⬆</div>
-      <div class="text-lg mb-2">DRAG & DROP LOG FILE</div>
-      <div class="text-sm mb-6" style="color: var(--text-dim);">or click to browse · .log .txt · max 16MB</div>
-      <input type="file" id="fileInput" accept=".log,.txt" class="hidden" />
+      <div class="scan-line"></div>
+      <div class="text-5xl mb-4">⬆</div>
+      <div class="text-lg mb-2" style="letter-spacing:3px">DRAG & DROP LOG FILE</div>
+      <div class="text-sm mb-6" style="color:var(--text-dim)">or click to browse · .log .txt · max 16MB</div>
+      <input type="file" id="fileInput" accept=".log,.txt" style="display:none" />
       <button class="btn-primary" onclick="document.getElementById('fileInput').click()">
         [ SELECT FILE ]
       </button>
     </div>
 
-    <div id="fileInfo" class="mt-4 text-sm hidden" style="color: var(--text-dim);">
-      &gt; FILE LOADED: <span id="fileName" style="color: var(--green);"></span>
+    <div id="fileInfo" class="mt-4 text-sm hidden">
+      <div class="card p-3">
+        <span style="color:var(--text-dim)">&gt; FILE LOADED: </span>
+        <span id="fileName" style="color:var(--green)"></span>
+        <span id="fileSize" style="color:var(--text-dim); margin-left:1rem"></span>
+      </div>
     </div>
 
     <div class="mt-6 text-center">
-      <button class="btn-primary" id="analyzeBtn" disabled>
-        [ ANALYZE ]
-      </button>
+      <button class="btn-primary" id="analyzeBtn" disabled>[ ANALYZE ]</button>
     </div>
 
-    <div id="loadingMsg" class="mt-4 text-center text-sm hidden" style="color: var(--text-dim);">
-      &gt; SCANNING... PLEASE WAIT
+    <div id="loadingMsg" class="mt-6 hidden">
+      <div class="card p-4 text-sm">
+        <div style="color:var(--text-dim)" id="loadingText">&gt; SCANNING LOG FILE...</div>
+        <div class="mt-2" style="color:var(--text-dim)">&gt; RUNNING DETECTION ALGORITHMS...</div>
+        <div class="mt-2" style="color:var(--text-dim)">&gt; SCORING THREATS...</div>
+        <div class="mt-2 cursor" style="color:var(--green)">&gt; PLEASE WAIT</div>
+      </div>
     </div>
 
+    <div id="errorMsg" class="mt-4 hidden">
+      <div class="card p-3 text-sm" style="border-color:#ff444444;color:var(--red)">
+        &gt; ERROR: <span id="errorText"></span>
+      </div>
+    </div>
   </section>
 
-  <!-- ─────────────────────────────────────────
-       SECTION 4: DASHBOARD (hidden until analysis)
-  ───────────────────────────────────────── -->
+  <!-- ── DASHBOARD ── -->
   <section id="dashboard" class="py-24 px-6 max-w-6xl mx-auto hidden">
 
-    <div class="text-xs tracking-widest mb-2" style="color: var(--text-dim);">&gt; ANALYSIS COMPLETE</div>
-    <h2 class="text-3xl mb-12">THREAT REPORT</h2>
+    <div class="text-xs tracking-widest mb-2" style="color:var(--text-dim)">&gt; ANALYSIS COMPLETE</div>
+    <h2 class="text-3xl mb-2" style="letter-spacing:4px">THREAT REPORT</h2>
+    <div class="text-xs mb-4" style="color:var(--text-dim)">─────────────────────────────────</div>
+    <div class="text-xs mb-12" style="color:var(--text-dim)">
+      TIME RANGE: <span id="timeRange" style="color:var(--green)">—</span>
+    </div>
 
     <!-- Stat Cards -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
       <div class="stat-card">
-        <div class="text-xs tracking-widest mb-2" style="color: var(--text-dim);">TOTAL REQUESTS</div>
-        <div class="text-4xl" id="statRequests">—</div>
+        <div class="text-xs tracking-widest mb-3" style="color:var(--text-dim)">TOTAL REQUESTS</div>
+        <div class="text-4xl stat-value" id="statRequests">—</div>
       </div>
       <div class="stat-card">
-        <div class="text-xs tracking-widest mb-2" style="color: var(--text-dim);">UNIQUE IPs</div>
-        <div class="text-4xl" id="statIPs">—</div>
+        <div class="text-xs tracking-widest mb-3" style="color:var(--text-dim)">UNIQUE IPs</div>
+        <div class="text-4xl stat-value" id="statIPs">—</div>
       </div>
       <div class="stat-card">
-        <div class="text-xs tracking-widest mb-2" style="color: var(--text-dim);">ANOMALIES</div>
-        <div class="text-4xl" id="statAnomalies" style="color: var(--amber);">—</div>
+        <div class="text-xs tracking-widest mb-3" style="color:var(--text-dim)">ANOMALIES</div>
+        <div class="text-4xl stat-value" id="statAnomalies" style="color:var(--amber)">—</div>
       </div>
       <div class="stat-card">
-        <div class="text-xs tracking-widest mb-2" style="color: var(--text-dim);">RISK SCORE</div>
-        <div class="text-4xl" id="statRisk" style="color: var(--red);">—</div>
+        <div class="text-xs tracking-widest mb-3" style="color:var(--text-dim)">RISK SCORE</div>
+        <div class="text-4xl stat-value" id="statRisk" style="color:var(--red)">—</div>
       </div>
     </div>
 
-    <!-- Timeline Chart placeholder -->
+    <!-- Timeline Chart -->
     <div class="card mb-12">
-      <div class="text-xs tracking-widest mb-4" style="color: var(--text-dim);">&gt; TRAFFIC TIMELINE</div>
+      <div class="text-xs tracking-widest mb-1" style="color:var(--text-dim)">&gt; TRAFFIC TIMELINE</div>
+      <div class="text-xs mb-6" style="color:var(--text-dim)">requests per hour · red = suspicious</div>
       <canvas id="timelineChart" height="80"></canvas>
     </div>
 
     <!-- Anomaly Table -->
     <div class="card mb-12">
-      <div class="text-xs tracking-widest mb-4" style="color: var(--text-dim);">&gt; FLAGGED EVENTS</div>
+      <div class="text-xs tracking-widest mb-1" style="color:var(--text-dim)">&gt; FLAGGED EVENTS</div>
+      <div class="text-xs mb-6" style="color:var(--text-dim)">click any row for full detail</div>
       <table class="sentinel-table">
         <thead>
           <tr>
@@ -332,26 +423,323 @@
             <th>Severity</th>
           </tr>
         </thead>
-        <tbody id="anomalyTableBody">
-          <!-- Populated by JS -->
-        </tbody>
+        <tbody id="anomalyTableBody"></tbody>
       </table>
     </div>
 
   </section>
 
-  <!-- ─────────────────────────────────────────
-       SIDE PANEL (IP detail)
-  ───────────────────────────────────────── -->
+  <!-- ── SIDE PANEL ── -->
+  <div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
   <div class="side-panel" id="sidePanel">
     <div class="flex justify-between items-center mb-6">
-      <div class="text-xs tracking-widest" style="color: var(--text-dim);">&gt; IP DETAIL</div>
-      <button onclick="closePanel()" style="color: var(--text-dim); background: none; border: none; cursor: pointer; font-size: 1.2rem;">✕</button>
+      <div class="text-xs tracking-widest" style="color:var(--text-dim)">&gt; IP DETAIL</div>
+      <button onclick="closePanel()" style="color:var(--text-dim);background:none;border:none;cursor:pointer;font-size:1.2rem">✕</button>
     </div>
-    <div id="sidePanelContent">
-      <!-- Populated by JS on row click -->
-    </div>
+    <div id="sidePanelContent"></div>
   </div>
+
+  <script>
+    const API = 'http://127.0.0.1:5000';
+
+    // ── Matrix rain ──
+    const canvas = document.getElementById('matrixCanvas');
+    const ctx = canvas.getContext('2d');
+    function resizeCanvas() {
+      canvas.width  = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*<>/\\|';
+    const fontSize = 14;
+    let columns = Math.floor(canvas.width / fontSize);
+    let drops = Array(columns).fill(1);
+
+    function drawMatrix() {
+      ctx.fillStyle = 'rgba(10,10,10,0.05)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#00ff88';
+      ctx.font = fontSize + 'px Share Tech Mono';
+      for (let i = 0; i < drops.length; i++) {
+        const char = chars[Math.floor(Math.random() * chars.length)];
+        ctx.fillText(char, i * fontSize, drops[i] * fontSize);
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+        drops[i]++;
+      }
+    }
+    setInterval(drawMatrix, 50);
+
+    // ── Terminal typing animation ──
+    function typeElement(el, duration) {
+      return new Promise(resolve => {
+        el.style.transition = `width ${duration}ms steps(${el.textContent.length})`;
+        el.style.width = '100%';
+        setTimeout(resolve, duration);
+      });
+    }
+
+    async function runTypingSequence() {
+      await new Promise(r => setTimeout(r, 500));
+      await typeElement(document.getElementById('termLine1'), 800);
+      await new Promise(r => setTimeout(r, 200));
+      await typeElement(document.getElementById('termLine2'), 400);
+      await typeElement(document.getElementById('termLine3'), 400);
+      await typeElement(document.getElementById('termLine4'), 400);
+      await new Promise(r => setTimeout(r, 300));
+      await typeElement(document.getElementById('termLine5'), 600);
+    }
+    runTypingSequence();
+
+    // ── File upload handling ──
+    const fileInput    = document.getElementById('fileInput');
+    const uploadZone   = document.getElementById('uploadZone');
+    const fileInfo     = document.getElementById('fileInfo');
+    const fileName     = document.getElementById('fileName');
+    const fileSize     = document.getElementById('fileSize');
+    const analyzeBtn   = document.getElementById('analyzeBtn');
+    const loadingMsg   = document.getElementById('loadingMsg');
+    const errorMsg     = document.getElementById('errorMsg');
+    const errorText    = document.getElementById('errorText');
+
+    let selectedFile = null;
+
+    // Click on upload zone
+    uploadZone.addEventListener('click', e => {
+      if (e.target !== uploadZone.querySelector('button')) return;
+    });
+
+    // Drag and drop
+    uploadZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      uploadZone.classList.add('dragover');
+    });
+    uploadZone.addEventListener('dragleave', () => {
+      uploadZone.classList.remove('dragover');
+    });
+    uploadZone.addEventListener('drop', e => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file) setFile(file);
+    });
+
+    // File input change
+    fileInput.addEventListener('change', e => {
+      if (e.target.files[0]) setFile(e.target.files[0]);
+    });
+
+    function setFile(file) {
+      selectedFile = file;
+      fileName.textContent = file.name;
+      fileSize.textContent = `(${(file.size / 1024).toFixed(1)} KB)`;
+      fileInfo.classList.remove('hidden');
+      analyzeBtn.disabled = false;
+      errorMsg.classList.add('hidden');
+
+      // Trigger scan animation briefly
+      uploadZone.classList.add('scanning');
+      setTimeout(() => uploadZone.classList.remove('scanning'), 1500);
+    }
+
+    // ── Analyze button ──
+    analyzeBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+
+      analyzeBtn.disabled = true;
+      loadingMsg.classList.remove('hidden');
+      errorMsg.classList.add('hidden');
+      document.getElementById('dashboard').classList.add('hidden');
+
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      try {
+        const response = await fetch(`${API}/api/analyze`, {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Analysis failed');
+        }
+
+        loadingMsg.classList.add('hidden');
+        renderDashboard(data);
+
+      } catch (err) {
+        loadingMsg.classList.add('hidden');
+        errorText.textContent = err.message;
+        errorMsg.classList.remove('hidden');
+        analyzeBtn.disabled = false;
+      }
+    });
+
+    // ── Render dashboard ──
+    function renderDashboard(data) {
+      const summary = data.summary;
+
+      // Show dashboard section
+      const dash = document.getElementById('dashboard');
+      dash.classList.remove('hidden');
+      dash.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      // Time range
+      document.getElementById('timeRange').textContent =
+        summary.time_range_start.slice(0,16) + ' → ' + summary.time_range_end.slice(0,16);
+
+      // Stat cards with count-up
+      animateCount('statRequests', summary.total_requests);
+      animateCount('statIPs',      summary.unique_ips);
+      animateCount('statAnomalies', summary.total_anomalies);
+      animateCount('statRisk',     summary.overall_risk);
+
+      // Timeline chart
+      renderTimeline(data.timeline);
+
+      // Anomaly table
+      renderTable(data.all_scores);
+
+      analyzeBtn.disabled = false;
+    }
+
+    // ── Count-up animation ──
+    function animateCount(id, target) {
+      const el = document.getElementById(id);
+      let current = 0;
+      const step = Math.ceil(target / 30);
+      const interval = setInterval(() => {
+        current = Math.min(current + step, target);
+        el.textContent = current;
+        if (current >= target) clearInterval(interval);
+      }, 40);
+    }
+
+    // ── Timeline chart ──
+    let timelineChartInstance = null;
+    function renderTimeline(timeline) {
+      const labels = timeline.map(t => `${t.hour}:00`);
+      const counts = timeline.map(t => t.count);
+      const colors = timeline.map(t =>
+        t.hour < 6 ? '#ff444488' : '#00ff8844'
+      );
+      const borderColors = timeline.map(t =>
+        t.hour < 6 ? '#ff4444' : '#00ff88'
+      );
+
+      if (timelineChartInstance) timelineChartInstance.destroy();
+
+      timelineChartInstance = new Chart(
+        document.getElementById('timelineChart'),
+        {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Requests',
+              data: counts,
+              backgroundColor: colors,
+              borderColor: borderColors,
+              borderWidth: 1,
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: '#111',
+                borderColor: '#00ff8844',
+                borderWidth: 1,
+                titleColor: '#00ff88',
+                bodyColor: '#666',
+              }
+            },
+            scales: {
+              x: {
+                ticks: { color: '#555', font: { family: 'Share Tech Mono', size: 11 } },
+                grid:  { color: '#00ff8811' }
+              },
+              y: {
+                ticks: { color: '#555', font: { family: 'Share Tech Mono', size: 11 } },
+                grid:  { color: '#00ff8811' }
+              }
+            }
+          }
+        }
+      );
+    }
+
+    // ── Anomaly table ──
+    function renderTable(scores) {
+      const tbody = document.getElementById('anomalyTableBody');
+      tbody.innerHTML = '';
+
+      scores.forEach((row, i) => {
+        const tr = document.createElement('tr');
+        tr.className = 'row-flicker';
+        tr.style.animationDelay = `${i * 80}ms`;
+        tr.style.opacity = '0';
+
+        const badgeClass = {
+          'Critical': 'badge-critical',
+          'High':     'badge-high',
+          'Medium':   'badge-medium',
+          'Low':      'badge-low',
+        }[row.severity] || 'badge-low';
+
+        tr.innerHTML = `
+          <td>${row.ip}</td>
+          <td style="color:var(--text-dim)">${row.anomaly_types}</td>
+          <td>${row.total_score}</td>
+          <td><span class="badge ${badgeClass}">${row.severity.toUpperCase()}</span></td>
+        `;
+
+        tr.addEventListener('click', () => openPanel(row));
+        tbody.appendChild(tr);
+      });
+    }
+
+    // ── Side panel ──
+    function openPanel(row) {
+      const content = document.getElementById('sidePanelContent');
+      content.innerHTML = `
+        <div class="text-2xl mb-1" style="color:var(--green)">${row.ip}</div>
+        <div class="text-xs mb-6" style="color:var(--text-dim)">─────────────────────────────</div>
+
+        <div class="log-line mb-4">
+          <span>ANOMALY TYPE</span><br/>
+          ${row.anomaly_types}
+        </div>
+
+        <div class="log-line mb-4">
+          <span>RISK SCORE</span><br/>
+          <span style="font-size:2rem;color:var(--${row.severity === 'High' || row.severity === 'Critical' ? 'red' : row.severity === 'Medium' ? 'amber' : 'blue'})">${row.total_score}</span>
+        </div>
+
+        <div class="log-line mb-4">
+          <span>SEVERITY</span><br/>
+          <span class="badge badge-${row.severity.toLowerCase()}">${row.severity.toUpperCase()}</span>
+        </div>
+
+        <div class="log-line mb-6">
+          <span>EXPLANATION</span><br/>
+          <div style="margin-top:0.5rem;line-height:1.6;color:#888;font-size:0.85rem">${row.explanations}</div>
+        </div>
+      `;
+
+      document.getElementById('sidePanel').classList.add('open');
+      document.getElementById('panelOverlay').classList.add('active');
+    }
+
+    function closePanel() {
+      document.getElementById('sidePanel').classList.remove('open');
+      document.getElementById('panelOverlay').classList.remove('active');
+    }
+  </script>
 
 </body>
 </html>
