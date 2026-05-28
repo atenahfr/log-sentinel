@@ -384,24 +384,37 @@
     </div>
 
     <!-- Stat Cards -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-      <div class="stat-card">
-        <div class="text-xs tracking-widest mb-3" style="color:var(--text-dim)">TOTAL REQUESTS</div>
-        <div class="text-4xl stat-value" id="statRequests">—</div>
-      </div>
-      <div class="stat-card">
-        <div class="text-xs tracking-widest mb-3" style="color:var(--text-dim)">UNIQUE IPs</div>
-        <div class="text-4xl stat-value" id="statIPs">—</div>
-      </div>
-      <div class="stat-card">
-        <div class="text-xs tracking-widest mb-3" style="color:var(--text-dim)">ANOMALIES</div>
-        <div class="text-4xl stat-value" id="statAnomalies" style="color:var(--amber)">—</div>
-      </div>
-      <div class="stat-card">
-        <div class="text-xs tracking-widest mb-3" style="color:var(--text-dim)">RISK SCORE</div>
-        <div class="text-4xl stat-value" id="statRisk" style="color:var(--red)">—</div>
-      </div>
-    </div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+  <div class="stat-card" id="cardRequests">
+    <div class="text-xs tracking-widest mb-3" style="color:var(--text-dim)">TOTAL REQUESTS</div>
+    <div class="text-4xl stat-value mb-2" id="statRequests">—</div>
+    <div class="text-xs" style="color:var(--text-dim)" id="statRequestsSub"></div>
+  </div>
+  <div class="stat-card" id="cardIPs">
+    <div class="text-xs tracking-widest mb-3" style="color:var(--text-dim)">UNIQUE IPs</div>
+    <div class="text-4xl stat-value mb-2" id="statIPs">—</div>
+    <div class="text-xs" style="color:var(--text-dim)" id="statIPsSub"></div>
+  </div>
+  <div class="stat-card" id="cardAnomalies">
+    <div class="text-xs tracking-widest mb-3" style="color:var(--text-dim)">ANOMALIES</div>
+    <div class="text-4xl stat-value mb-2" id="statAnomalies" style="color:var(--amber)">—</div>
+    <div class="text-xs" style="color:var(--text-dim)" id="statAnomaliesSub"></div>
+  </div>
+  <div class="stat-card" id="cardRisk">
+    <div class="text-xs tracking-widest mb-3" style="color:var(--text-dim)">RISK SCORE</div>
+    <div class="text-4xl stat-value mb-2" id="statRisk" style="color:var(--red)">—</div>
+    <div class="text-xs" id="statRiskSub"></div>
+  </div>
+</div>
+
+<!-- System status bar -->
+<div class="card mb-12 p-3" id="statusBar">
+  <div class="text-xs tracking-widest" style="color:var(--text-dim)">
+    &gt; SYSTEM STATUS:
+    <span id="systemStatus" class="ml-2" style="letter-spacing:3px">—</span>
+  </div>
+  <div class="mt-2" id="anomalyBreakdown" style="color:var(--text-dim);font-size:0.75rem"></div>
+</div>
 
     <!-- Timeline Chart -->
     <div class="card mb-12">
@@ -596,6 +609,51 @@
       animateCount('statIPs',      summary.unique_ips);
       animateCount('statAnomalies', summary.total_anomalies);
       animateCount('statRisk',     summary.overall_risk);
+
+      // Stat card subtitles
+      document.getElementById('statRequestsSub').textContent =
+        `across ${summary.unique_ips} unique sources`;
+      document.getElementById('statIPsSub').textContent =
+        `${Math.round((summary.total_anomalies / summary.unique_ips) * 10) / 10} anomalies per IP avg`;
+      document.getElementById('statAnomaliesSub').textContent =
+        `${data.anomaly_counts.brute_force} brute · ${data.anomaly_counts['404_spike']} scan · ${data.anomaly_counts['500_spike']} error`;
+
+      // Risk card color + subtitle
+      const riskEl = document.getElementById('statRisk');
+      const riskSub = document.getElementById('statRiskSub');
+      if (summary.overall_risk >= 150) {
+        riskEl.style.color = 'var(--red)';
+        riskSub.style.color = 'var(--red)';
+        riskSub.textContent = 'CRITICAL THREAT LEVEL';
+      } else if (summary.overall_risk >= 80) {
+        riskEl.style.color = 'var(--amber)';
+        riskSub.style.color = 'var(--amber)';
+        riskSub.textContent = 'ELEVATED THREAT LEVEL';
+      } else {
+        riskEl.style.color = 'var(--green)';
+        riskSub.style.color = 'var(--green)';
+        riskSub.textContent = 'LOW THREAT LEVEL';
+      }
+
+      // System status bar
+      const statusEl = document.getElementById('systemStatus');
+      const counts = data.anomaly_counts;
+      if (summary.overall_risk >= 150) {
+        statusEl.textContent = '⚠ CRITICAL';
+        statusEl.style.color = 'var(--red)';
+      } else if (summary.overall_risk >= 80) {
+        statusEl.textContent = '⚡ WARNING';
+        statusEl.style.color = 'var(--amber)';
+      } else {
+        statusEl.textContent = '✓ SECURE';
+        statusEl.style.color = 'var(--green)';
+      }
+
+      document.getElementById('anomalyBreakdown').innerHTML =
+        `brute_force: <span style="color:var(--red)">${counts.brute_force}</span> &nbsp;|&nbsp; ` +
+        `404_spike: <span style="color:var(--amber)">${counts['404_spike']}</span> &nbsp;|&nbsp; ` +
+        `500_spike: <span style="color:var(--amber)">${counts['500_spike']}</span> &nbsp;|&nbsp; ` +
+        `off_hours: <span style="color:var(--blue)">${counts.off_hours_traffic}</span>`;
 
       // Timeline chart
       renderTimeline(data.timeline);
