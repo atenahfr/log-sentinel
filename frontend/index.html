@@ -518,7 +518,7 @@
     <div class="card mb-12">
       <div class="text-xs tracking-widest mb-1" style="color:var(--text-dim)">&gt; TRAFFIC TIMELINE</div>
       <div class="text-xs mb-6" style="color:var(--text-dim)">requests per hour · red = suspicious</div>
-      <canvas id="timelineChart" height="80"></canvas>
+      <div id="timelineChart" style="display:flex;align-items:flex-end;gap:4px;padding:1rem 0;min-height:220px"></div>
     </div>
 
     <!-- Anomaly Table -->
@@ -708,6 +708,10 @@
       animateCount('statAnomalies', summary.total_anomalies);
       animateCount('statRisk',     summary.overall_risk);
 
+
+      // Timeline chart — wait for dashboard to be visible and sized
+      setTimeout(() => renderTimeline(data.timeline), 500);
+
       // Stat card subtitles
       document.getElementById('statRequestsSub').textContent =
         `across ${summary.unique_ips} unique sources`;
@@ -775,58 +779,169 @@
     }
 
     // ── Timeline chart ──
-    let timelineChartInstance = null;
     function renderTimeline(timeline) {
-      const labels = timeline.map(t => `${t.hour}:00`);
-      const counts = timeline.map(t => t.count);
-      const colors = timeline.map(t =>
-        t.hour < 6 ? '#ff444488' : '#00ff8844'
-      );
-      const borderColors = timeline.map(t =>
-        t.hour < 6 ? '#ff4444' : '#00ff88'
-      );
+      const container = document.getElementById('timelineChart');
+      container.innerHTML = '';
+      container.style.position = 'relative';
 
-      if (timelineChartInstance) timelineChartInstance.destroy();
+      const max = Math.max(...timeline.map(t => t.count));
+      const avg = Math.round(timeline.reduce((s, t) => s + t.count, 0) / timeline.length);
+      const avgPct = Math.round((avg / max) * 100);
 
-      timelineChartInstance = new Chart(
-        document.getElementById('timelineChart'),
-        {
-          type: 'bar',
-          data: {
-            labels,
-            datasets: [{
-              label: 'Requests',
-              data: counts,
-              backgroundColor: colors,
-              borderColor: borderColors,
-              borderWidth: 1,
-            }]
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                backgroundColor: '#111',
-                borderColor: '#00ff8844',
-                borderWidth: 1,
-                titleColor: '#00ff88',
-                bodyColor: '#666',
-              }
-            },
-            scales: {
-              x: {
-                ticks: { color: '#555', font: { family: 'Share Tech Mono', size: 11 } },
-                grid:  { color: '#00ff8811' }
-              },
-              y: {
-                ticks: { color: '#555', font: { family: 'Share Tech Mono', size: 11 } },
-                grid:  { color: '#00ff8811' }
-              }
-            }
-          }
+      // Tooltip element
+      const tooltip = document.createElement('div');
+      tooltip.style.cssText = `
+        position: absolute;
+        background: #0d0d0d;
+        border: 1px solid #00ff8844;
+        padding: 8px 12px;
+        font-size: 11px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s;
+        z-index: 10;
+        min-width: 140px;
+      `;
+      container.appendChild(tooltip);
+
+      // Average line
+      const avgLine = document.createElement('div');
+      avgLine.style.cssText = `
+        position: absolute;
+        left: 0; right: 0;
+        bottom: calc(28px + ${avgPct}% * 0.72);
+        height: 1px;
+        background: #ffaa00;
+        pointer-events: none;
+        z-index: 5;
+      `;
+
+      const avgLabel = document.createElement('div');
+      avgLabel.style.cssText = `
+        position: absolute;
+        right: 4px;
+        bottom: calc(32px + ${avgPct}% * 0.72);
+        font-size: 9px;
+        color: #0a0a0a;
+        background: #ffaa00;
+        padding: 1px 5px;
+        pointer-events: none;
+        z-index: 6;
+        letter-spacing: 1px;
+      `;
+      avgLabel.textContent = `avg: ${avg}`;
+      container.appendChild(avgLine);
+      container.appendChild(avgLabel);
+
+      // Bars wrapper
+      const barsWrapper = document.createElement('div');
+      barsWrapper.style.cssText = `
+        display: flex;
+        align-items: flex-end;
+        gap: 4px;
+        padding: 1rem 0 0 0;
+        height: 200px;
+        width: 100%;
+      `;
+
+      timeline.forEach((t, idx) => {
+        const isSusp = t.hour < 6;
+        const heightPct = Math.round((t.count / max) * 100);
+        const label = `${String(t.hour).padStart(2,'0')}:00`;
+
+        const col = document.createElement('div');
+        col.style.cssText = `
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: flex-end;
+          flex: 1;
+          height: 100%;
+          gap: 4px;
+          cursor: crosshair;
+          position: relative;
+        `;
+
+        const suspIcon = document.createElement('div');
+        suspIcon.style.cssText = `font-size:10px; color:${isSusp ? '#ff4444' : 'transparent'}`;
+        suspIcon.textContent = '⚠';
+
+        const countLabel = document.createElement('div');
+        countLabel.style.cssText = `font-size:9px; color:${isSusp ? '#ff6666' : '#555'}`;
+        countLabel.textContent = t.count;
+
+        const bar = document.createElement('div');
+        bar.style.cssText = `
+          width: 80%;
+          height: 0%;
+          background: ${isSusp ? 'rgba(255,68,68,0.25)' : 'rgba(0,255,136,0.12)'};
+          border-top: 2px solid ${isSusp ? '#ff4444' : '#00ff88'};
+          border-left: 1px solid ${isSusp ? '#ff444422' : '#00ff8822'};
+          border-right: 1px solid ${isSusp ? '#ff444422' : '#00ff8822'};
+          transition: height 0.8s cubic-bezier(0.4,0,0.2,1) ${idx * 60}ms, background 0.2s;
+          ${isSusp ? 'box-shadow: 0 0 12px #ff444466, inset 0 0 20px #ff44440a; animation: suspPulse 2s infinite;' : ''}
+        `;
+
+        const hourLabel = document.createElement('div');
+        hourLabel.style.cssText = `
+          font-size: 9px;
+          color: ${isSusp ? '#ff6666' : '#444'};
+          margin-top: 4px;
+          white-space: nowrap;
+        `;
+        hourLabel.textContent = label;
+
+        col.appendChild(suspIcon);
+        col.appendChild(countLabel);
+        col.appendChild(bar);
+        col.appendChild(hourLabel);
+
+        // Hover effects
+        col.addEventListener('mouseenter', (e) => {
+          bar.style.background = isSusp ? 'rgba(255,68,68,0.45)' : 'rgba(0,255,136,0.28)';
+          bar.style.boxShadow = isSusp ? '0 0 16px #ff444466' : '0 0 16px #00ff8844';
+
+          const rect = container.getBoundingClientRect();
+          const colRect = col.getBoundingClientRect();
+          const tipLeft = colRect.left - rect.left;
+          const tipTop  = colRect.top  - rect.top - 90;
+
+          tooltip.style.opacity = '1';
+          tooltip.style.left = `${Math.min(tipLeft, container.offsetWidth - 160)}px`;
+          tooltip.style.top  = `${Math.max(tipTop, 0)}px`;
+          tooltip.innerHTML = `
+            <div style="color:var(--green);margin-bottom:4px">HOUR ${label}</div>
+            <div style="color:#666">requests: <span style="color:${isSusp ? '#ff4444' : '#00ff88'}">${t.count}</span></div>
+            <div style="color:#666">vs avg: <span style="color:${t.count > avg ? '#ff4444' : '#00ff88'}">${t.count > avg ? '+' : ''}${t.count - avg}</span></div>
+            <div style="margin-top:4px;color:${isSusp ? '#ff4444' : '#555'}">${isSusp ? '⚠ SUSPICIOUS HOUR' : '✓ normal traffic'}</div>
+          `;
+        });
+
+        col.addEventListener('mouseleave', () => {
+          bar.style.background = isSusp ? 'rgba(255,68,68,0.25)' : 'rgba(0,255,136,0.12)';
+          bar.style.boxShadow = isSusp ? '0 0 8px #ff444433' : '';
+          tooltip.style.opacity = '0';
+        });
+
+        barsWrapper.appendChild(col);
+
+        // Animate bar up after a tiny delay
+        setTimeout(() => {
+          bar.style.height = `${heightPct}%`;
+        }, 50 + idx * 60);
+      });
+
+      container.appendChild(barsWrapper);
+
+      // Pulse animation for suspicious bars
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes suspPulse {
+          0%,100% { box-shadow: 0 0 8px #ff444433; }
+          50%      { box-shadow: 0 0 16px #ff444477; }
         }
-      );
+      `;
+      document.head.appendChild(style);
     }
 
     // ── Anomaly table ──
