@@ -146,10 +146,17 @@
       position: relative;
       animation: pulse-border 3s infinite;
     }
-    .upload-zone:hover, .upload-zone.dragover {
+    .upload-zone:hover {
       border-color: var(--green);
       background: #00ff8808;
       animation: none;
+    }
+    .upload-zone.dragover {
+      border-color: var(--green);
+      border-style: solid;
+      background: #00ff8815;
+      animation: none;
+      transform: scale(1.01);
     }
 
     /* Scan line animation */
@@ -189,7 +196,8 @@
     .stat-value { animation: countup 0.5s ease forwards; }
 
     /* Table */
-    .sentinel-table { width: 100%; border-collapse: collapse; }
+    .sentinel-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .sentinel-table td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .sentinel-table th {
       color: var(--text-dim);
       font-size: 0.7rem;
@@ -472,8 +480,9 @@
   </section>
 
   <!-- ── DASHBOARD ── -->
-  <section id="dashboard" class="py-24 px-6 max-w-6xl mx-auto hidden">
+  <section id="dashboard" class="py-12 px-6 max-w-6xl mx-auto">
 
+    <div id="dashboardContent" class="hidden">
     <div class="text-xs tracking-widest mb-2" style="color:var(--text-dim)">&gt; ANALYSIS COMPLETE</div>
     <h2 class="text-3xl mb-2" style="letter-spacing:4px">THREAT REPORT</h2>
     <div class="text-xs mb-4" style="color:var(--text-dim)">─────────────────────────────────</div>
@@ -528,14 +537,25 @@
       <table class="sentinel-table">
         <thead>
           <tr>
-            <th>IP / Identifier</th>
-            <th>Anomaly Type</th>
-            <th>Risk Score</th>
-            <th>Severity</th>
+            <th style="width:30%">IP / Identifier</th>
+            <th style="width:25%">Anomaly Type</th>
+            <th style="width:15%">Risk Score</th>
+            <th style="width:15%">Severity</th>
           </tr>
         </thead>
         <tbody id="anomalyTableBody"></tbody>
       </table>
+    </div>
+    </div> <!-- end dashboardContent -->
+
+    <!-- Empty state — shown before first analysis -->
+    <div id="emptyState" class="py-24 px-6 max-w-3xl mx-auto text-center">
+      <div class="text-xs tracking-widest mb-6" style="color:var(--text-dim)">&gt; AWAITING INPUT</div>
+      <div class="text-6xl mb-6" style="color:#00ff8822">◎</div>
+      <div class="text-xl mb-4" style="color:var(--text-dim);letter-spacing:3px">NO DATA LOADED</div>
+      <p class="text-sm mb-8" style="color:var(--text-dim)">
+        Upload a log file above to begin threat analysis.
+      </p>
     </div>
 
   </section>
@@ -552,6 +572,7 @@
 
   <script>
     const API = 'http://127.0.0.1:5000';
+    document.getElementById('emptyState').style.display = 'block';
 
     // ── Matrix rain ──
     const canvas = document.getElementById('matrixCanvas');
@@ -652,6 +673,9 @@
       // Trigger scan animation briefly
       uploadZone.classList.add('scanning');
       setTimeout(() => uploadZone.classList.remove('scanning'), 1500);
+
+      // Pulse the analyze button
+      setPulse(true);
     }
 
     // ── Analyze button ──
@@ -661,7 +685,7 @@
       analyzeBtn.disabled = true;
       loadingMsg.classList.remove('hidden');
       errorMsg.classList.add('hidden');
-      document.getElementById('dashboard').classList.add('hidden');
+      document.getElementById('dashboardContent').classList.add('hidden');
 
       const formData = new FormData();
       formData.append('file', selectedFile);
@@ -693,10 +717,10 @@
     function renderDashboard(data) {
       const summary = data.summary;
 
-      // Show dashboard section
-      const dash = document.getElementById('dashboard');
-      dash.classList.remove('hidden');
-      dash.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Show dashboard content
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('dashboardContent').classList.remove('hidden');
+      document.getElementById('dashboard').scrollIntoView({ behavior: 'smooth', block: 'start' });
 
       // Time range
       document.getElementById('timeRange').textContent =
@@ -1081,7 +1105,7 @@
         if (meter) meter.style.width = `${scorePercent}%`;
       }, 300);
     }
-    
+
     // ── Scroll-triggered animations ──
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
