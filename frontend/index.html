@@ -951,66 +951,137 @@
 
       scores.forEach((row, i) => {
         const tr = document.createElement('tr');
-        tr.className = 'row-flicker';
-        tr.style.animationDelay = `${i * 80}ms`;
         tr.style.opacity = '0';
+        tr.style.transition = `opacity 0.4s ease ${i * 100}ms`;
 
-        const badgeClass = {
-          'Critical': 'badge-critical',
-          'High':     'badge-high',
-          'Medium':   'badge-medium',
-          'Low':      'badge-low',
-        }[row.severity] || 'badge-low';
+        const severityColor = {
+          'Critical': '#ff4444',
+          'High':     '#ff4444',
+          'Medium':   '#ffaa00',
+          'Low':      '#4488ff',
+        }[row.severity] || '#4488ff';
+
+        const typeColors = {
+          'brute_force':       { bg: '#ff444411', border: '#ff444444', text: '#ff6666' },
+          '404_spike':         { bg: '#ffaa0011', border: '#ffaa0044', text: '#ffcc44' },
+          '500_spike':         { bg: '#ff660011', border: '#ff660044', text: '#ff8844' },
+          'off_hours_traffic': { bg: '#4488ff11', border: '#4488ff44', text: '#66aaff' },
+        }[row.anomaly_types] || { bg: '#00ff8811', border: '#00ff8844', text: '#00ff88' };
 
         tr.innerHTML = `
-          <td>${row.ip}</td>
-          <td style="color:var(--text-dim)">${row.anomaly_types}</td>
-          <td>${row.total_score}</td>
-          <td><span class="badge ${badgeClass}">${row.severity.toUpperCase()}</span></td>
+          <td style="border-left: 2px solid ${severityColor}; padding-left: 1rem;">
+            ${row.ip}
+          </td>
+          <td>
+            <span style="
+              background: ${typeColors.bg};
+              border: 1px solid ${typeColors.border};
+              color: ${typeColors.text};
+              padding: 2px 8px;
+              font-size: 0.75rem;
+              letter-spacing: 1px;
+            ">${row.anomaly_types}</span>
+          </td>
+          <td style="color: ${severityColor}; font-weight: bold;">${row.total_score}</td>
+          <td><span class="badge badge-${row.severity.toLowerCase()}">${row.severity.toUpperCase()}</span></td>
         `;
 
+        tr.style.cursor = 'pointer';
         tr.addEventListener('click', () => openPanel(row));
+        tr.addEventListener('mouseenter', () => {
+          tr.style.borderLeft = `2px solid ${severityColor}`;
+        });
+
         tbody.appendChild(tr);
+
+        // Flicker in
+        setTimeout(() => {
+          tr.style.opacity = '1';
+        }, 50 + i * 100);
       });
     }
 
-    // ── Side panel ──
     function openPanel(row) {
+      const severityColor = {
+        'Critical': '#ff4444',
+        'High':     '#ff4444',
+        'Medium':   '#ffaa00',
+        'Low':      '#4488ff',
+      }[row.severity] || '#4488ff';
+
+      const scorePercent = Math.min(Math.round((row.total_score / 150) * 100), 100);
+
       const content = document.getElementById('sidePanelContent');
       content.innerHTML = `
-        <div class="text-2xl mb-1" style="color:var(--green)">${row.ip}</div>
-        <div class="text-xs mb-6" style="color:var(--text-dim)">─────────────────────────────</div>
 
-        <div class="log-line mb-4">
-          <span>ANOMALY TYPE</span><br/>
-          ${row.anomaly_types}
+        <div style="margin-bottom:1.5rem">
+          <div style="font-size:1.5rem;color:var(--green);margin-bottom:4px">${row.ip}</div>
+          <div style="font-size:0.7rem;color:var(--text-dim);letter-spacing:2px">FLAGGED ENTITY</div>
         </div>
 
-        <div class="log-line mb-4">
-          <span>RISK SCORE</span><br/>
-          <span style="font-size:2rem;color:var(--${row.severity === 'High' || row.severity === 'Critical' ? 'red' : row.severity === 'Medium' ? 'amber' : 'blue'})">${row.total_score}</span>
+        <div style="border:1px solid #00ff8811;padding:1rem;margin-bottom:1rem;background:#0d0d0d">
+          <div style="font-size:0.7rem;color:var(--text-dim);letter-spacing:2px;margin-bottom:0.75rem">THREAT METER</div>
+          <div style="background:#111;height:8px;margin-bottom:6px;position:relative">
+            <div style="
+              height:100%;
+              width:0%;
+              background: linear-gradient(90deg, #00ff88, ${severityColor});
+              transition: width 1s cubic-bezier(0.4,0,0.2,1);
+            " id="threatMeter"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:0.7rem">
+            <span style="color:var(--text-dim)">0</span>
+            <span style="color:${severityColor}">${row.total_score} pts</span>
+            <span style="color:var(--text-dim)">150+</span>
+          </div>
         </div>
 
-        <div class="log-line mb-4">
-          <span>SEVERITY</span><br/>
-          <span class="badge badge-${row.severity.toLowerCase()}">${row.severity.toUpperCase()}</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem">
+          <div style="border:1px solid #00ff8811;padding:0.75rem;background:#0d0d0d">
+            <div style="font-size:0.65rem;color:var(--text-dim);margin-bottom:4px">SEVERITY</div>
+            <div style="color:${severityColor};font-size:0.9rem;letter-spacing:2px">${row.severity.toUpperCase()}</div>
+          </div>
+          <div style="border:1px solid #00ff8811;padding:0.75rem;background:#0d0d0d">
+            <div style="font-size:0.65rem;color:var(--text-dim);margin-bottom:4px">RISK SCORE</div>
+            <div style="color:${severityColor};font-size:0.9rem">${row.total_score} pts</div>
+          </div>
         </div>
 
-        <div class="log-line mb-6">
-          <span>EXPLANATION</span><br/>
-          <div style="margin-top:0.5rem;line-height:1.6;color:#888;font-size:0.85rem">${row.explanations}</div>
+        <div style="border:1px solid #00ff8811;padding:0.75rem;margin-bottom:1rem;background:#0d0d0d">
+          <div style="font-size:0.65rem;color:var(--text-dim);margin-bottom:6px;letter-spacing:2px">ANOMALY TYPE</div>
+          <div style="font-size:0.85rem;color:var(--green)">${row.anomaly_types}</div>
+        </div>
+
+        <div style="border:1px solid #00ff8811;padding:0.75rem;margin-bottom:1rem;background:#0d0d0d">
+          <div style="font-size:0.65rem;color:var(--text-dim);margin-bottom:8px;letter-spacing:2px">EXPLANATION</div>
+          <div style="font-size:0.8rem;line-height:1.7;color:#888">${row.explanations}</div>
+        </div>
+
+        <div style="border:1px solid #00ff8811;padding:0.75rem;background:#0d0d0d">
+          <div style="font-size:0.65rem;color:var(--text-dim);margin-bottom:8px;letter-spacing:2px">RECOMMENDED ACTION</div>
+          <div style="font-size:0.8rem;line-height:1.7;color:#666">
+            ${row.anomaly_types === 'brute_force'
+              ? '&gt; Block IP at firewall level<br>&gt; Enable account lockout policy<br>&gt; Review authentication logs'
+              : row.anomaly_types === '404_spike'
+              ? '&gt; Block IP at firewall level<br>&gt; Review exposed endpoints<br>&gt; Check for sensitive file exposure'
+              : row.anomaly_types === '500_spike'
+              ? '&gt; Inspect application error logs<br>&gt; Check for injection patterns<br>&gt; Review input validation'
+              : '&gt; Monitor IP for continued activity<br>&gt; Cross-reference with threat intel<br>&gt; Review access patterns'
+            }
+          </div>
         </div>
       `;
 
       document.getElementById('sidePanel').classList.add('open');
       document.getElementById('panelOverlay').classList.add('active');
-    }
 
-    function closePanel() {
-      document.getElementById('sidePanel').classList.remove('open');
-      document.getElementById('panelOverlay').classList.remove('active');
+      // Animate threat meter after panel opens
+      setTimeout(() => {
+        const meter = document.getElementById('threatMeter');
+        if (meter) meter.style.width = `${scorePercent}%`;
+      }, 300);
     }
-
+    
     // ── Scroll-triggered animations ──
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
