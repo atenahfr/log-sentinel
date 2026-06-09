@@ -201,6 +201,30 @@ def timeline():
     return jsonify({
         'timeline': last_report['timeline']
     }), 200
+    
+@app.route('/api/demo', methods=['GET'])
+def demo():
+    """
+    Demo endpoint — runs analysis on the built-in sample log file.
+    Used for portfolio demonstrations without requiring a file upload.
+
+    Returns:
+        200: full analysis report from sample.log
+        404: sample log file not found
+        500: analysis failed
+    """
+    sample_path = 'data/sample.log'
+
+    if not os.path.exists(sample_path):
+        return make_error('Sample log file not found.', 404)
+
+    try:
+        global last_report
+        report = generate_report(sample_path)
+        last_report = report
+        return jsonify(report), 200
+    except Exception as e:
+        return make_error(f'Demo analysis failed: {str(e)}', 500)
 
 
 if __name__ == '__main__':

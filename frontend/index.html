@@ -453,8 +453,9 @@
         </div>
 
         <!-- Analyze button -->
-        <div class="mt-6 text-center">
+        <div class="mt-6 flex gap-4 justify-center">
           <button class="btn-primary" id="analyzeBtn" disabled>[ RUN ANALYSIS ]</button>
+          <button class="btn-primary" id="demoBtn" style="border-color:#ffaa00;color:#ffaa00">[ LOAD DEMO ]</button>
         </div>
 
         <!-- Loading -->
@@ -636,6 +637,36 @@
     const errorText    = document.getElementById('errorText');
 
     let selectedFile = null;
+
+    // ── Demo button ──
+    document.getElementById('demoBtn').addEventListener('click', async () => {
+      const demoBtn = document.getElementById('demoBtn');
+      demoBtn.disabled = true;
+      demoBtn.textContent = '[ LOADING... ]';
+      loadingMsg.classList.remove('hidden');
+      errorMsg.classList.add('hidden');
+      document.getElementById('dashboardContent').classList.add('hidden');
+
+      try {
+        const response = await fetch(`${API}/api/demo`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Demo failed');
+        }
+
+        loadingMsg.classList.add('hidden');
+        renderDashboard(data);
+
+      } catch (err) {
+        loadingMsg.classList.add('hidden');
+        errorText.textContent = err.message;
+        errorMsg.classList.remove('hidden');
+      } finally {
+        demoBtn.disabled = false;
+        demoBtn.textContent = '[ LOAD DEMO ]';
+      }
+    });
 
     // Click on upload zone
     uploadZone.addEventListener('click', e => {
