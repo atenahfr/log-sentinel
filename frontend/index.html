@@ -307,13 +307,9 @@
         ── Brute Force &nbsp;·&nbsp; Dir Scanning &nbsp;·&nbsp; Error Spikes &nbsp;·&nbsp; Off-Hours Traffic ──
       </div>
 
-      <!-- Animated terminal lines -->
-      <div class="text-xs mb-10 text-left inline-block" style="color:var(--text-dim);min-width:320px">
-        <div id="termLine1" style="overflow:hidden;white-space:nowrap;width:0">$ initializing detection modules...</div>
-        <div id="termLine2" style="overflow:hidden;white-space:nowrap;width:0;color:var(--green)">✓ parser.py loaded</div>
-        <div id="termLine3" style="overflow:hidden;white-space:nowrap;width:0;color:var(--green)">✓ detector.py loaded</div>
-        <div id="termLine4" style="overflow:hidden;white-space:nowrap;width:0;color:var(--green)">✓ scorer.py loaded</div>
-        <div id="termLine5" style="overflow:hidden;white-space:nowrap;width:0">$ ready. awaiting log file input_<span style="animation:blink 1s infinite;display:inline-block">█</span></div>
+      <!-- Rotating threat feed -->
+      <div class="text-xs mb-10 text-left inline-block" style="color:var(--text-dim);min-width:420px;height:24px">
+        <div id="threatFeed"></div>
       </div>
 
       <div>
@@ -613,17 +609,34 @@
       });
     }
 
-    async function runTypingSequence() {
-      await new Promise(r => setTimeout(r, 500));
-      await typeElement(document.getElementById('termLine1'), 800);
-      await new Promise(r => setTimeout(r, 200));
-      await typeElement(document.getElementById('termLine2'), 400);
-      await typeElement(document.getElementById('termLine3'), 400);
-      await typeElement(document.getElementById('termLine4'), 400);
-      await new Promise(r => setTimeout(r, 300));
-      await typeElement(document.getElementById('termLine5'), 600);
+    const threatFeedLines = [
+      { text: '⚠ brute force detected · 45.33.32.156 · 40 failed logins', color: '#ff6666' },
+      { text: 'if failed_attempts > threshold: flag_ip(ip)', color: '#00ff88', mono: true },
+      { text: '⚠ directory scan blocked · probing /admin /.env /config.php', color: '#ffaa00' },
+      { text: 'risk_score = sum(anomaly_weights[type] for type in flags)', color: '#00ff88', mono: true },
+      { text: '✓ system armed · 4 detection modules active', color: '#00ff88' },
+      { text: '⚠ off-hours traffic flagged · 02:00–04:00 window', color: '#4488ff' },
+    ];
+
+    let feedIndex = 0;
+    function cycleThreatFeed() {
+      const el = document.getElementById('threatFeed');
+      const line = threatFeedLines[feedIndex];
+
+      el.style.opacity = '0';
+      setTimeout(() => {
+        el.textContent = '$ ' + line.text;
+        el.style.color = line.color;
+        el.style.fontFamily = line.mono ? "'Share Tech Mono', monospace" : 'inherit';
+        el.style.transition = 'opacity 0.4s ease';
+        el.style.opacity = '1';
+      }, 400);
+
+      feedIndex = (feedIndex + 1) % threatFeedLines.length;
     }
-    runTypingSequence();
+
+    cycleThreatFeed();
+    setInterval(cycleThreatFeed, 3200);
 
     // ── File upload handling ──
     const fileInput    = document.getElementById('fileInput');
@@ -763,9 +776,6 @@
       animateCount('statAnomalies', summary.total_anomalies);
       animateCount('statRisk',     summary.overall_risk);
 
-
-      // Timeline chart — wait for dashboard to be visible and sized
-      setTimeout(() => renderTimeline(data.timeline), 500);
 
       // Stat card subtitles
       document.getElementById('statRequestsSub').textContent =
@@ -1137,6 +1147,11 @@
       }, 300);
     }
 
+    function closePanel() {
+      document.getElementById('sidePanel').classList.remove('open');
+      document.getElementById('panelOverlay').classList.remove('active');
+    }
+
     // ── Scroll-triggered animations ──
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -1212,12 +1227,6 @@
       }
     }
 
-    // Hook into setFile to trigger pulse
-    const originalSetFile = setFile;
-    window.setFile = function(file) {
-      originalSetFile(file);
-      setPulse(true);
-    }
 
     // ── Step card top border glow on hover ──
     ['step1','step2','step3'].forEach(id => {
