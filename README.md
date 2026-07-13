@@ -1,22 +1,38 @@
-# Log Sentinel 
-### Log Analysis Dashboard with Anomaly Detection
+# Log Sentinel 🔍
 
-![Python](https://img.shields.io/badge/Python-3.12-blue)
-![Flask](https://img.shields.io/badge/Flask-3.1-green)
-![Status](https://img.shields.io/badge/Status-In%20Progress-orange)
+> A cybersecurity log analysis dashboard that detects brute force attacks, directory scanning, error spikes, and off-hours traffic — with plain-English explanations for every threat.
 
-A cybersecurity tool that parses server access logs, detects suspicious patterns, scores threats by risk level, and displays everything on an interactive dashboard.
+![Python](https://img.shields.io/badge/Python-3.12-blue?style=flat-square)
+![Flask](https://img.shields.io/badge/Flask-3.1-green?style=flat-square)
+![Status](https://img.shields.io/badge/Status-Live-brightgreen?style=flat-square)
+![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)
 
-Built by **Atena Hosseinifar** · Toronto Metropolitan University · CS 
+**[🚀 Live Demo](https://atenahfr.github.io/log-sentinel/frontend/index.html)** · **[⚙️ API](https://log-sentinel-bgd7.onrender.com/api/health)** · Built by [Atena Hosseinifar](https://github.com/atenahfr) · TMU CS Year 3
 
 ---
 
-## What it detects
+## What it does
 
-- 🔴 **Brute force attacks** — repeated failed login attempts from the same IP
-- 🟠 **Directory scanning** — IPs probing for hidden pages like `/admin`, `/.env`, `/config.php`
-- 🟡 **Error spikes** — unusual surges in 404 or 500 errors
-- 🔵 **Off-hours traffic** — suspicious requests at 2am–4am from unknown IPs
+Log Sentinel parses Apache/Nginx server access logs and automatically detects four categories of suspicious behavior:
+
+| Threat Type | Detection Logic | Risk Score |
+|-------------|----------------|------------|
+| 🔴 Brute Force | Same IP with 10+ failed logins | 80 pts |
+| 🟠 Directory Scanning | Same IP with 10+ 404 errors | 40 pts |
+| 🟡 Server Error Spike | Same IP causing 5+ 500 errors | 60 pts |
+| 🔵 Off-Hours Traffic | Any activity between midnight–6am | 30 pts |
+
+Every flagged event gets a **risk score**, a **severity label** (Critical/High/Medium/Low), and a **plain-English explanation** — making it readable by non-technical stakeholders, not just security engineers.
+
+---
+
+## What makes it different
+
+Most log analysis tools tell you *what* was flagged. Log Sentinel tells you *why* in plain English:
+
+> *"This IP made 40 failed login attempts on /login. Normal users fail 1-2 times at most. This volume strongly suggests an automated brute force attack."*
+
+This explainability layer is what separates Log Sentinel from a basic data project and pushes it toward real SIEM territory.
 
 ---
 
@@ -25,8 +41,8 @@ Built by **Atena Hosseinifar** · Toronto Metropolitan University · CS
 | Layer | Technology |
 |-------|-----------|
 | Backend | Python 3.12, Flask 3.1, pandas, scikit-learn |
-| Frontend | HTML/CSS/JS, Chart.js, Tailwind CSS |
-| Data | Apache access log format |
+| Frontend | HTML/CSS/JS, Tailwind CSS, Chart.js |
+| Detection | Rule-based anomaly detection with statistical thresholds |
 | Deployment | Render (backend), GitHub Pages (frontend) |
 
 ---
@@ -35,15 +51,30 @@ Built by **Atena Hosseinifar** · Toronto Metropolitan University · CS
 ```
 log-sentinel/
 ├── backend/
-│   ├── parser.py      # Parses raw log files into structured data
-│   ├── detector.py    # Anomaly detection logic
-│   ├── scorer.py      # Risk scoring system
-│   ├── report.py      # Report generation
-│   └── app.py         # Flask API
-├── frontend/          # Dashboard (HTML/CSS/JS)
-├── tests/             # Unit tests
+│   ├── parser.py      # Regex-based Apache log parser
+│   ├── detector.py    # Four anomaly detectors with auto-generated explanations
+│   ├── scorer.py      # Risk scoring and severity labeling
+│   ├── report.py      # Unified analysis pipeline
+│   └── app.py         # Flask REST API (5 endpoints)
+├── frontend/
+│   └── index.html     # Single-page dashboard with terminal aesthetic
+├── tests/
+│   └── test_detector.py  # 7 unit tests
 └── data/              # Log files (gitignored)
 ```
+---
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/health` | Server status check |
+| POST | `/api/analyze` | Upload and analyze a log file |
+| GET | `/api/summary` | Summary stats from last analysis |
+| GET | `/api/anomalies` | All flagged events sorted by risk score |
+| GET | `/api/timeline` | Requests-per-hour data |
+| GET | `/api/demo` | Run analysis on built-in sample data |
+
 ---
 
 ## How to run locally
@@ -51,86 +82,54 @@ log-sentinel/
 ```bash
 git clone https://github.com/atenahfr/log-sentinel.git
 cd log-sentinel
+
+# Backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 python3 backend/app.py
+
+# Frontend (in a new terminal)
+python3 -m http.server 8080
+# Open http://localhost:8080/frontend/index.html
 ```
 
 ---
 
+## Running tests
 
-## API Endpoints
-
-Base URL (local): `http://127.0.0.1:5000`
-
-### GET /api/health
-Verify the server is running.
-
-**Response:**
-```json
-{
-  "status": "ok",
-  "message": "Log Sentinel API is running"
-}
+```bash
+python3 -m unittest tests/test_detector.py -v
+# 7 tests, all passing
 ```
 
-### POST /api/analyze
-Upload a log file and run the full analysis pipeline.
+---
 
-**Request:** multipart/form-data with field `file` (.log or .txt, max 16MB)
+## What I learned
 
-**Response:** complete analysis report including summary, anomalies, timeline, and scores.
-
-**Errors:**
-- `400` — missing file, empty file, or wrong file type
-- `413` — file exceeds 16MB
-- `422` — file is correct type but not valid log format
-- `500` — unexpected server error
-
-### GET /api/summary
-Returns summary stats from the last analysis.
-
-**Response:**
-```json
-{
-  "total_requests": 360,
-  "unique_ips": 6,
-  "total_anomalies": 5,
-  "overall_risk": 240,
-  "time_range_start": "2024-05-15 02:00:00+00:00",
-  "time_range_end": "2024-05-15 17:58:23+00:00"
-}
-```
-
-### GET /api/anomalies
-Returns all flagged anomalies sorted by risk score.
-
-**Response:** anomaly_counts, all_scores, top_offenders
-
-### GET /api/timeline
-Returns requests-per-hour data for the timeline chart.
-
-**Response:**
-```json
-{
-  "timeline": [
-    {"hour": 2, "count": 40},
-    {"hour": 3, "count": 25}
-  ]
-}
-```
-
-
-## Live Demo
-
-🌐 **Frontend:** https://atenahfr.github.io/log-sentinel/frontend/index.html  
-⚙️ **Backend API:** https://log-sentinel-bgd7.onrender.com/api/health
+- How Apache access logs are structured and what each field means
+- How to build rule-based anomaly detectors with configurable thresholds
+- How to design a risk scoring system that stacks across multiple anomaly types
+- How pandas DataFrames enable fast log analysis without loops
+- How to build and deploy a Flask REST API with proper error handling
+- How CORS works and why it matters for frontend/backend separation
+- What makes a security tool explainable vs just functional
 
 ---
 
 ## Future improvements
-- ML-based anomaly detection with Isolation Forest
-- Real-time log streaming with WebSockets
-- SQLite database for analysis history
-- SSH auth.log support
+
+- [ ] ML-based detection with Isolation Forest (scikit-learn)
+- [ ] Real-time log streaming with WebSockets
+- [ ] SQLite database for analysis history across sessions
+- [ ] SSH auth.log format support
+- [ ] IP geolocation enrichment on flagged addresses
+
+---
+
+## Live Demo
+
+🌐 **Frontend:** https://atenahfr.github.io/log-sentinel/frontend/index.html
+⚙️ **Backend API:** https://log-sentinel-bgd7.onrender.com/api/health
+
+*Note: The free Render instance spins down after inactivity — first request may take 30 seconds to wake up.*
