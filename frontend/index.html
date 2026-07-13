@@ -557,6 +557,149 @@
 
   </section>
 
+  <!-- ── HELP SECTION ── -->
+  <section id="help" class="py-24 px-6 max-w-5xl mx-auto">
+    <div class="text-xs tracking-widest mb-2" style="color:var(--text-dim)">&gt; DOCUMENTATION</div>
+    <h2 class="text-3xl mb-2" style="letter-spacing:4px">UNDERSTANDING THREATS</h2>
+    <div class="text-xs mb-4" style="color:var(--text-dim)">─────────────────────────────────</div>
+    <p class="text-sm mb-12" style="color:var(--text-dim);max-width:600px">
+      Log Sentinel detects four categories of suspicious behavior. Here's what each one means and why it matters.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+      <!-- Brute Force -->
+      <div class="step-card">
+        <div class="absolute top-0 left-0 right-0 h-px" style="background:linear-gradient(90deg,transparent,#ff4444,transparent)"></div>
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-8 h-8 flex items-center justify-center" style="border:1px solid #ff444444;color:#ff4444">⚡</div>
+          <div>
+            <div class="text-sm" style="letter-spacing:2px;color:#ff4444">BRUTE FORCE ATTACK</div>
+            <div class="text-xs" style="color:var(--text-dim)">authentication · high severity</div>
+          </div>
+        </div>
+        <p class="text-sm leading-relaxed mb-4" style="color:var(--text-dim)">
+          A brute force attack happens when someone repeatedly tries to guess a password by sending hundreds or thousands of login attempts in a short time. They're usually automated bots cycling through common password lists.
+        </p>
+        <div class="text-xs p-3 mb-4" style="background:#ff44440a;border:1px solid #ff444422;color:#ff6666">
+          &gt; flagged when: same IP makes 10+ failed logins
+        </div>
+        <div class="text-xs" style="color:var(--text-dim)">
+          <div class="mb-1" style="color:#666">WHAT TO DO:</div>
+          <div>&gt; Block the IP at your firewall</div>
+          <div>&gt; Enable account lockout after 5 failed attempts</div>
+          <div>&gt; Consider adding CAPTCHA to your login page</div>
+        </div>
+      </div>
+
+      <!-- Directory Scanning -->
+      <div class="step-card">
+        <div class="absolute top-0 left-0 right-0 h-px" style="background:linear-gradient(90deg,transparent,#ffaa00,transparent)"></div>
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-8 h-8 flex items-center justify-center" style="border:1px solid #ffaa0044;color:#ffaa00">◈</div>
+          <div>
+            <div class="text-sm" style="letter-spacing:2px;color:#ffaa00">DIRECTORY SCANNING</div>
+            <div class="text-xs" style="color:var(--text-dim)">reconnaissance · medium severity</div>
+          </div>
+        </div>
+        <p class="text-sm leading-relaxed mb-4" style="color:var(--text-dim)">
+          Directory scanning is when an attacker probes your server for hidden or sensitive files — things like admin panels, configuration files, or database backups. They use automated tools that try thousands of common paths looking for anything exposed.
+        </p>
+        <div class="text-xs p-3 mb-4" style="background:#ffaa000a;border:1px solid #ffaa0022;color:#ffcc44">
+          &gt; flagged when: same IP generates 10+ 404 errors
+        </div>
+        <div class="text-xs" style="color:var(--text-dim)">
+          <div class="mb-1" style="color:#666">WHAT TO DO:</div>
+          <div>&gt; Block the IP at your firewall</div>
+          <div>&gt; Ensure sensitive files aren't publicly accessible</div>
+          <div>&gt; Remove or relocate admin panels from default paths</div>
+        </div>
+      </div>
+
+      <!-- Error Spike -->
+      <div class="step-card">
+        <div class="absolute top-0 left-0 right-0 h-px" style="background:linear-gradient(90deg,transparent,#ff6600,transparent)"></div>
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-8 h-8 flex items-center justify-center" style="border:1px solid #ff660044;color:#ff6600">⚠</div>
+          <div>
+            <div class="text-sm" style="letter-spacing:2px;color:#ff6600">SERVER ERROR SPIKE</div>
+            <div class="text-xs" style="color:var(--text-dim)">exploitation · medium severity</div>
+          </div>
+        </div>
+        <p class="text-sm leading-relaxed mb-4" style="color:var(--text-dim)">
+          When the same IP repeatedly causes 500 internal server errors, it often means they're sending malformed or malicious requests designed to break your application. This can be a sign of injection attacks or attempts to find exploitable bugs.
+        </p>
+        <div class="text-xs p-3 mb-4" style="background:#ff66000a;border:1px solid #ff660022;color:#ff8844">
+          &gt; flagged when: same IP triggers 5+ server errors
+        </div>
+        <div class="text-xs" style="color:var(--text-dim)">
+          <div class="mb-1" style="color:#666">WHAT TO DO:</div>
+          <div>&gt; Inspect your application error logs immediately</div>
+          <div>&gt; Check for SQL injection or XSS patterns in requests</div>
+          <div>&gt; Review and harden your input validation</div>
+        </div>
+      </div>
+
+      <!-- Off-Hours Traffic -->
+      <div class="step-card">
+        <div class="absolute top-0 left-0 right-0 h-px" style="background:linear-gradient(90deg,transparent,#4488ff,transparent)"></div>
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-8 h-8 flex items-center justify-center" style="border:1px solid #4488ff44;color:#4488ff">◑</div>
+          <div>
+            <div class="text-sm" style="letter-spacing:2px;color:#4488ff">OFF-HOURS TRAFFIC</div>
+            <div class="text-xs" style="color:var(--text-dim)">behavioral · low severity</div>
+          </div>
+        </div>
+        <p class="text-sm leading-relaxed mb-4" style="color:var(--text-dim)">
+          Traffic between midnight and 6am is inherently suspicious for most applications. Legitimate users are rarely active at 3am, but automated bots and attackers often operate at night to avoid detection and reduce competition for server resources.
+        </p>
+        <div class="text-xs p-3 mb-4" style="background:#4488ff0a;border:1px solid #4488ff22;color:#66aaff">
+          &gt; flagged when: any activity detected between 00:00–06:00
+        </div>
+        <div class="text-xs" style="color:var(--text-dim)">
+          <div class="mb-1" style="color:#666">WHAT TO DO:</div>
+          <div>&gt; Cross-reference with other anomaly flags on the same IP</div>
+          <div>&gt; Check if the traffic matches known legitimate use patterns</div>
+          <div>&gt; Consider rate limiting during off-hours windows</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Risk score explanation -->
+    <div class="card mt-12 p-6">
+      <div class="text-xs tracking-widest mb-4" style="color:var(--text-dim)">&gt; RISK SCORING SYSTEM</div>
+      <p class="text-sm leading-relaxed mb-6" style="color:var(--text-dim)">
+        Every flagged event is assigned a risk score based on its threat level. Scores stack when a single IP triggers multiple anomaly types.
+      </p>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="text-center p-3" style="border:1px solid #ff444433">
+          <div style="color:#ff4444;font-size:1.5rem;font-weight:bold">80</div>
+          <div class="text-xs mt-1" style="color:var(--text-dim)">brute force</div>
+        </div>
+        <div class="text-center p-3" style="border:1px solid #ff660033">
+          <div style="color:#ff6600;font-size:1.5rem;font-weight:bold">60</div>
+          <div class="text-xs mt-1" style="color:var(--text-dim)">error spike</div>
+        </div>
+        <div class="text-center p-3" style="border:1px solid #ffaa0033">
+          <div style="color:#ffaa00;font-size:1.5rem;font-weight:bold">40</div>
+          <div class="text-xs mt-1" style="color:var(--text-dim)">dir scanning</div>
+        </div>
+        <div class="text-center p-3" style="border:1px solid #4488ff33">
+          <div style="color:#4488ff;font-size:1.5rem;font-weight:bold">30</div>
+          <div class="text-xs mt-1" style="color:var(--text-dim)">off-hours</div>
+        </div>
+      </div>
+      <div class="mt-6 text-xs" style="color:var(--text-dim)">
+        <span style="color:#ff4444">CRITICAL ≥100</span> &nbsp;·&nbsp;
+        <span style="color:#ffaa00">HIGH ≥70</span> &nbsp;·&nbsp;
+        <span style="color:#4488ff">MEDIUM ≥40</span> &nbsp;·&nbsp;
+        <span style="color:#666">LOW &lt;40</span>
+      </div>
+    </div>
+
+  </section>
+  
   <!-- ── SIDE PANEL ── -->
   <div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
   <div class="side-panel" id="sidePanel">
