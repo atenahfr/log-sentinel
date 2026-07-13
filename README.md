@@ -117,6 +117,12 @@ python3 -m unittest tests/test_detector.py -v
 
 ---
 
+## Blog Post
+
+📝 [How I Built a Log Analysis Tool to Detect Network Anomalies](https://dev.to/atenahfr/how-i-built-a-log-analysis-tool-to-detect-network-anomalies-45ed) — dev.to
+
+---
+
 ## Future improvements
 
 - [ ] ML-based detection with Isolation Forest (scikit-learn)
