@@ -12,7 +12,11 @@ from flask_cors import CORS
 from report import generate_report
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=[
+    'http://localhost:8080',
+    'http://127.0.0.1:8080',
+    'https://atenahfr.github.io'
+])
 
 # Where uploaded files are temporarily stored
 UPLOAD_FOLDER = 'data/uploads'
