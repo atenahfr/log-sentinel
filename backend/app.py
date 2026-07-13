@@ -209,26 +209,63 @@ def timeline():
 @app.route('/api/demo', methods=['GET'])
 def demo():
     """
-    Demo endpoint — runs analysis on the built-in sample log file.
+    Demo endpoint — generates a sample log and runs analysis.
     Used for portfolio demonstrations without requiring a file upload.
-
-    Returns:
-        200: full analysis report from sample.log
-        404: sample log file not found
-        500: analysis failed
     """
-    sample_path = 'data/sample.log'
+    import tempfile
+    import random
+    from datetime import datetime, timezone
 
-    if not os.path.exists(sample_path):
-        return make_error('Sample log file not found.', 404)
+    # Generate sample log data in memory
+    lines = []
+    base = datetime(2024, 5, 15, 0, 0, 0, tzinfo=timezone.utc)
+    ips_normal = ['10.0.0.22', '10.0.0.55', '10.0.0.88']
+    paths_normal = ['/index.html', '/about.html', '/products', '/dashboard', '/contact']
+    methods = ['GET', 'GET', 'GET', 'POST']
 
+    # Normal daytime traffic
+    for hour in range(8, 18):
+        for _ in range(random.randint(15, 40)):
+            ip = random.choice(ips_normal)
+            ts = base.replace(hour=hour, minute=random.randint(0,59), second=random.randint(0,59))
+            path = random.choice(paths_normal)
+            lines.append(f'{ip} - - [{ts.strftime("%d/%b/%Y:%H:%M:%S +0000")}] "{random.choice(methods)} {path} HTTP/1.1" 200 {random.randint(512, 8192)}')
+
+    # Brute force at 2am
+    for i in range(40):
+        ts = base.replace(hour=2, minute=i//60, second=i%60)
+        lines.append(f'45.33.32.156 - - [{ts.strftime("%d/%b/%Y:%H:%M:%S +0000")}] "GET /login HTTP/1.1" 401 512')
+
+    # Scanner at 3am
+    for i in range(25):
+        ts = base.replace(hour=3, minute=random.randint(0,59), second=random.randint(0,59))
+        path = random.choice(['/admin', '/.env', '/config.php', '/wp-admin', '/phpmyadmin', '/backup'])
+        lines.append(f'198.51.100.23 - - [{ts.strftime("%d/%b/%Y:%H:%M:%S +0000")}] "GET {path} HTTP/1.1" 404 256')
+
+    # 500 errors at 2pm
+    for i in range(15):
+        ts = base.replace(hour=14, minute=random.randint(0,59), second=random.randint(0,59))
+        lines.append(f'203.0.113.77 - - [{ts.strftime("%d/%b/%Y:%H:%M:%S +0000")}] "POST /api/upload HTTP/1.1" 500 128')
+
+    random.shuffle(lines)
+
+    # Write to a temp file and analyze
     try:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.log', delete=False) as f:
+            f.write('\n'.join(lines))
+            temp_path = f.name
+
         global last_report
-        report = generate_report(sample_path)
+        report = generate_report(temp_path)
         last_report = report
         return jsonify(report), 200
+
     except Exception as e:
         return make_error(f'Demo analysis failed: {str(e)}', 500)
+
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
 
 
 if __name__ == '__main__':
