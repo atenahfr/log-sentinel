@@ -123,7 +123,9 @@ Returns requests-per-hour data for the timeline chart.
 
 
 ## Live Demo
-Coming soon...
+
+🌐 **Frontend:** https://atenahfr.github.io/log-sentinel/frontend/index.html  
+⚙️ **Backend API:** https://log-sentinel-bgd7.onrender.com/api/health
 
 ---
 
