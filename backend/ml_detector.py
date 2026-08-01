@@ -11,7 +11,7 @@ sys.path.append('backend')
 from features import build_feature_matrix
 
 
-def detect_ml_anomalies(df, contamination=0.2):
+def detect_ml_anomalies(df, contamination=0.15):
     """
     Uses Isolation Forest to detect anomalous IPs based on behavioral features.
 

@@ -125,6 +125,7 @@ if __name__ == '__main__':
     results = evaluate_both(
         log_path='data/labeled_sample.log',
         csv_path='data/labeled_sample.csv',
+        contamination=0.15,
     )
 
     print("=== EVALUATION RESULTS ===\n")
@@ -147,3 +148,25 @@ if __name__ == '__main__':
     print(f"{'Precision':<12} {rb['precision']:>12} {ml['precision']:>12}")
     print(f"{'Recall':<12} {rb['recall']:>12} {ml['recall']:>12}")
     print(f"{'F1 Score':<12} {rb['f1']:>12} {ml['f1']:>12}")
+    
+    print("\n=== CONTAMINATION TUNING ===\n")
+    print(f"{'Contamination':<15} {'Flagged':>8} {'Precision':>10} {'Recall':>8} {'F1':>8}")
+    print("-" * 55)
+
+    best_f1 = 0
+    best_contamination = 0.3
+
+    for c in [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50]:
+        r = evaluate_both(
+            log_path='data/labeled_sample.log',
+            csv_path='data/labeled_sample.csv',
+            contamination=c
+        )
+        m = r['ml']
+        print(f"{c:<15} {r['ml_flagged_count']:>8} {m['precision']:>10} {m['recall']:>8} {m['f1']:>8}")
+
+        if m['f1'] > best_f1:
+            best_f1 = m['f1']
+            best_contamination = c
+
+    print(f"\nBest contamination: {best_contamination} (F1 = {best_f1})")

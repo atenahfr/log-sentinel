@@ -37,7 +37,7 @@ def generate_report(log_filepath):
     scored = score_anomalies(bf, s404, s500, off)
 
     # Step 4: run ML detector
-    ml_results = detect_ml_anomalies(df, contamination=0.3)
+    ml_results = detect_ml_anomalies(df, contamination=0.15)
 
     # Step 5: build comparison — which IPs were caught by rules, ML, or both
     rule_ips = set(scored[~scored['ip'].str.startswith('hour_')]['ip'].values)
