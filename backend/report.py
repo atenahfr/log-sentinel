@@ -10,6 +10,7 @@ from detector import (
     detect_off_hours_traffic
 )
 from scorer import score_anomalies
+from ml_detector import detect_ml_anomalies
 
 
 def generate_report(log_filepath):
@@ -26,14 +27,27 @@ def generate_report(log_filepath):
     # Step 1: parse the log file into a DataFrame
     df = load_log_dataframe(log_filepath)
 
-    # Step 2: run all detectors
+    # Step 2: run all rule-based detectors
     bf   = detect_brute_force(df)
     s404 = detect_404_spike(df)
     s500 = detect_500_spike(df)
     off  = detect_off_hours_traffic(df)
 
-    # Step 3: score all anomalies
+    # Step 3: score all rule-based anomalies
     scored = score_anomalies(bf, s404, s500, off)
+
+    # Step 4: run ML detector
+    ml_results = detect_ml_anomalies(df, contamination=0.3)
+
+    # Step 5: build comparison — which IPs were caught by rules, ML, or both
+    rule_ips = set(scored[~scored['ip'].str.startswith('hour_')]['ip'].values)
+    ml_ips   = set(ml_results['ip'].values)
+
+    comparison = {
+        'caught_by_both':   list(rule_ips & ml_ips),
+        'rules_only':       list(rule_ips - ml_ips),
+        'ml_only':          list(ml_ips - rule_ips),
+    }
 
     # Step 4: build requests per hour for the timeline chart
     df['hour'] = df['timestamp'].dt.hour
@@ -69,6 +83,11 @@ def generate_report(log_filepath):
         'top_offenders':   top_offenders,
         'timeline':        timeline,
         'all_scores':      scored.to_dict(orient='records'),
+        
+        'ml_anomalies': ml_results[[
+            'ip', 'anomaly_score', 'anomaly_type', 'explanation'
+        ]].to_dict(orient='records'),
+        'comparison':   comparison,
     }
 
     return report
