@@ -117,9 +117,11 @@ python3 -m unittest tests/test_detector.py -v
 
 ---
 
-## Blog Post
+## Blog Posts
 
-📝 [How I Built a Log Analysis Tool to Detect Network Anomalies](https://dev.to/atenahfr/how-i-built-a-log-analysis-tool-to-detect-network-anomalies-45ed) — dev.to
+📝 [How I Built a Log Analysis Tool to Detect Network Anomalies](https://dev.to/atenahfr/how-i-built-a-log-analysis-tool-to-detect-network-anomalies-45ed) — dev.to · Phase 1
+
+📝 [I Added ML Anomaly Detection to My Cybersecurity Tool — Here's What the Numbers Actually Showed](https://dev.to/atenahfr/i-added-ml-anamoly-detection-to-my-cybersecurity-tool-heres-what-the-numbers-actually-showed-4jpp) — dev.to · Phase 2
 
 ---
 
