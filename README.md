@@ -123,9 +123,56 @@ python3 -m unittest tests/test_detector.py -v
 
 ---
 
+## ML Upgrade — Isolation Forest Detection
+
+Log Sentinel's second phase adds a machine learning layer on top of the rule-based detectors.
+
+### Model
+- **Algorithm:** Isolation Forest (scikit-learn)
+- **Type:** Unsupervised anomaly detection
+- **Parameters:** `n_estimators=100`, `contamination=0.15`, `random_state=42`
+
+### Feature Engineering
+Each IP address is transformed into a 5-feature behavioral vector before being passed to the model:
+
+| Feature | Description |
+|---------|-------------|
+| `request_count` | Total number of requests made |
+| `error_rate` | Fraction of requests returning 4xx or 5xx status codes |
+| `unique_paths` | Number of distinct URLs visited |
+| `night_traffic_ratio` | Fraction of requests made between midnight and 6am |
+| `avg_bytes` | Average response size in bytes |
+
+All features are normalized using `StandardScaler` (mean=0, std=1) before model training.
+
+### Evaluation Results
+Evaluated on a labeled dataset of 230 IPs (200 normal, 30 attackers):
+
+| Metric | Rule-Based | Isolation Forest |
+|--------|-----------|-----------------|
+| Precision | **1.0000** | 0.8571 |
+| Recall | **1.0000** | **1.0000** |
+| F1 Score | **1.0000** | 0.9231 |
+| True Positives | 30 | 30 |
+| False Positives | 0 | 5 |
+| False Negatives | 0 | 0 |
+
+### Key Finding
+Rule-based detectors achieved perfect scores because the dataset contains well-defined, structured attack patterns that exactly match the detection rules. The Isolation Forest caught all 30 attackers (recall=1.0) but generated 5 false positives (precision=0.857), resulting in F1=0.923.
+
+This is a known tradeoff: **rule-based systems excel on known attack signatures; ML generalizes better to unknown patterns**. In production, both layers running in parallel provides the strongest coverage.
+
+### New Files
+- `backend/features.py` — feature engineering (5 behavioral features per IP)
+- `backend/ml_detector.py` — Isolation Forest model with explanation generation
+- `backend/labeled_generator.py` — synthetic labeled dataset generator
+- `backend/evaluate.py` — precision/recall/F1 evaluation framework
+- `backend/plot_confusion.py` — confusion matrix visualization
+
+---
+
 ## Future improvements
 
-- [ ] ML-based detection with Isolation Forest (scikit-learn)
 - [ ] Real-time log streaming with WebSockets
 - [ ] SQLite database for analysis history across sessions
 - [ ] SSH auth.log format support
