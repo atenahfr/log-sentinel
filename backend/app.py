@@ -10,6 +10,7 @@ import uuid
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from report import generate_report
+from evaluate import evaluate_both
 
 app = Flask(__name__)
 CORS(app, origins=[
@@ -266,6 +267,48 @@ def demo():
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
+            
+@app.route('/api/evaluation', methods=['GET'])
+def evaluation():
+    """
+    Returns evaluation metrics for both detectors.
+    Runs against the built-in labeled dataset.
+
+    Returns:
+        200: precision, recall, F1 for rule-based and ML detectors
+        500: evaluation failed
+    """
+    try:
+        import tempfile
+        import random
+        import csv
+        from datetime import datetime, timezone
+        from labeled_generator import generate_labeled_dataset
+
+        lines, labels = generate_labeled_dataset()
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.log', delete=False) as f:
+            f.write('\n'.join(lines))
+            log_path = f.name
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False,
+                                          newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['ip', 'true_label'])
+            for ip, label in labels.items():
+                writer.writerow([ip, label])
+            csv_path = f.name
+
+        results = evaluate_both(log_path, csv_path, contamination=0.15)
+
+        import os
+        os.remove(log_path)
+        os.remove(csv_path)
+
+        return jsonify(results), 200
+
+    except Exception as e:
+        return make_error(f'Evaluation failed: {str(e)}', 500)
 
 
 if __name__ == '__main__':

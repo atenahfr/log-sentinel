@@ -527,9 +527,19 @@
       <div id="timelineChart" style="display:flex;align-items:flex-end;gap:4px;padding:1rem 0;min-height:220px"></div>
     </div>
 
-    <!-- Anomaly Table -->
-    <div class="card mb-12">
-      <div class="text-xs tracking-widest mb-1" style="color:var(--text-dim)">&gt; FLAGGED EVENTS</div>
+    <!-- Detection Method Toggle -->
+    <div class="flex gap-4 mb-6">
+      <button id="btnRules" class="btn-primary" style="font-size:0.75rem;padding:0.5rem 1.25rem"
+        onclick="switchView('rules')">[ RULE-BASED ]</button>
+      <button id="btnML" class="btn-primary" style="font-size:0.75rem;padding:0.5rem 1.25rem;border-color:#4488ff;color:#4488ff"
+        onclick="switchView('ml')">[ ML DETECTION ]</button>
+      <button id="btnCompare" class="btn-primary" style="font-size:0.75rem;padding:0.5rem 1.25rem;border-color:#ffaa00;color:#ffaa00"
+        onclick="switchView('compare')">[ COMPARE ]</button>
+    </div>
+
+    <!-- Rule-Based Table -->
+    <div class="card mb-6" id="viewRules">
+      <div class="text-xs tracking-widest mb-1" style="color:var(--text-dim)">&gt; RULE-BASED DETECTIONS</div>
       <div class="text-xs mb-6" style="color:var(--text-dim)">click any row for full detail</div>
       <table class="sentinel-table">
         <thead>
@@ -543,7 +553,74 @@
         <tbody id="anomalyTableBody"></tbody>
       </table>
     </div>
-    </div> <!-- end dashboardContent -->
+
+    <!-- ML Table -->
+    <div class="card mb-6" id="viewML" style="display:none">
+      <div class="text-xs tracking-widest mb-1" style="color:#4488ff">&gt; ML DETECTIONS — ISOLATION FOREST</div>
+      <div class="text-xs mb-6" style="color:var(--text-dim)">anomaly score: more negative = more suspicious</div>
+      <table class="sentinel-table">
+        <thead>
+          <tr>
+            <th style="width:35%">IP Address</th>
+            <th style="width:25%">Anomaly Score</th>
+            <th style="width:40%">Detection Method</th>
+          </tr>
+        </thead>
+        <tbody id="mlTableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Compare Table -->
+    <div class="card mb-6" id="viewCompare" style="display:none">
+      <div class="text-xs tracking-widest mb-1" style="color:#ffaa00">&gt; COMPARISON — RULES vs ML</div>
+      <div class="text-xs mb-6" style="color:var(--text-dim)">which detector caught each IP</div>
+      <table class="sentinel-table">
+        <thead>
+          <tr>
+            <th style="width:35%">IP Address</th>
+            <th style="width:30%">Caught By</th>
+            <th style="width:35%">Details</th>
+          </tr>
+        </thead>
+        <tbody id="compareTableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Model Performance -->
+    <div class="card mb-12" id="modelPerformance" style="display:none">
+      <div class="text-xs tracking-widest mb-4" style="color:var(--text-dim)">&gt; MODEL PERFORMANCE</div>
+      <div class="text-xs mb-6" style="color:var(--text-dim)">evaluated on 230 IPs · 30 attackers · 200 normal</div>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+        <div class="stat-card">
+          <div class="text-xs tracking-widest mb-2" style="color:var(--text-dim)">RULE PRECISION</div>
+          <div class="text-2xl" id="rulePrecision" style="color:var(--green)">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="text-xs tracking-widest mb-2" style="color:var(--text-dim)">RULE RECALL</div>
+          <div class="text-2xl" id="ruleRecall" style="color:var(--green)">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="text-xs tracking-widest mb-2" style="color:var(--text-dim)">RULE F1</div>
+          <div class="text-2xl" id="ruleF1" style="color:var(--green)">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="text-xs tracking-widest mb-2" style="color:var(--text-dim)">ML PRECISION</div>
+          <div class="text-2xl" id="mlPrecision" style="color:#4488ff">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="text-xs tracking-widest mb-2" style="color:var(--text-dim)">ML RECALL</div>
+          <div class="text-2xl" id="mlRecall" style="color:#4488ff">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="text-xs tracking-widest mb-2" style="color:var(--text-dim)">ML F1</div>
+          <div class="text-2xl" id="mlF1" style="color:#4488ff">—</div>
+        </div>
+      </div>
+      <div class="text-xs" style="color:var(--text-dim)">
+        &gt; contamination: <span style="color:var(--green)">0.15</span> &nbsp;·&nbsp;
+        &gt; model: <span style="color:var(--green)">IsolationForest(n_estimators=100, random_state=42)</span>
+      </div>
+    </div>
 
     <!-- Empty state — shown before first analysis -->
     <div id="emptyState" class="py-24 px-6 max-w-3xl mx-auto text-center">
@@ -971,6 +1048,10 @@
       // Anomaly table
       renderTable(data.all_scores);
 
+      renderMLTable(data.ml_anomalies);
+      renderCompareTable(data.comparison, data.all_scores, data.ml_anomalies);
+      loadEvaluation();
+
       analyzeBtn.disabled = false;
     }
 
@@ -1196,18 +1277,118 @@
 
         tr.style.cursor = 'pointer';
         tr.addEventListener('click', () => openPanel(row));
-        tr.addEventListener('mouseenter', () => {
-          tr.style.borderLeft = `2px solid ${severityColor}`;
-        });
 
         tbody.appendChild(tr);
 
-        // Flicker in
         setTimeout(() => {
           tr.style.opacity = '1';
         }, 50 + i * 100);
       });
     }
+
+    // ── View switcher ──
+    window.switchView = function(view) {
+      document.getElementById('viewRules').style.display   = view === 'rules'   ? 'block' : 'none';
+      document.getElementById('viewML').style.display      = view === 'ml'      ? 'block' : 'none';
+      document.getElementById('viewCompare').style.display = view === 'compare' ? 'block' : 'none';
+
+      document.getElementById('btnRules').style.borderColor   = view === 'rules'   ? 'var(--green)' : '#333';
+      document.getElementById('btnRules').style.color         = view === 'rules'   ? 'var(--green)' : '#555';
+      document.getElementById('btnML').style.borderColor      = view === 'ml'      ? '#4488ff' : '#333';
+      document.getElementById('btnML').style.color            = view === 'ml'      ? '#4488ff' : '#555';
+      document.getElementById('btnCompare').style.borderColor = view === 'compare' ? '#ffaa00' : '#333';
+      document.getElementById('btnCompare').style.color       = view === 'compare' ? '#ffaa00' : '#555';
+    }
+
+    // ── Render ML table ──
+    function renderMLTable(mlAnomalies) {
+      const tbody = document.getElementById('mlTableBody');
+      tbody.innerHTML = '';
+
+      if (!mlAnomalies || mlAnomalies.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" style="color:var(--text-dim);text-align:center;padding:2rem">No ML anomalies detected</td></tr>`;
+        return;
+      }
+
+      mlAnomalies.forEach((row, i) => {
+        const tr = document.createElement('tr');
+        tr.style.opacity = '0';
+        tr.style.transition = `opacity 0.4s ease ${i * 100}ms`;
+
+        tr.innerHTML = `
+          <td style="border-left:2px solid #4488ff;padding-left:1rem;color:#4488ff">${row.ip}</td>
+          <td style="color:#4488ff">${row.anomaly_score}</td>
+          <td style="color:var(--text-dim);font-size:0.75rem">Isolation Forest</td>
+        `;
+
+        tbody.appendChild(tr);
+        setTimeout(() => tr.style.opacity = '1', 50 + i * 100);
+      });
+    }
+
+    // ── Render compare table ──
+    function renderCompareTable(comparison, allScores, mlAnomalies) {
+      const tbody = document.getElementById('compareTableBody');
+      tbody.innerHTML = '';
+
+      const mlIPs   = new Set((mlAnomalies || []).map(r => r.ip));
+      const ruleIPs = new Set(allScores.filter(r => !r.ip.startsWith('hour_')).map(r => r.ip));
+      const allIPs  = new Set([...mlIPs, ...ruleIPs]);
+
+      [...allIPs].forEach((ip, i) => {
+        const inRules = ruleIPs.has(ip);
+        const inML    = mlIPs.has(ip);
+
+        let label, color;
+        if (inRules && inML) {
+          label = 'BOTH DETECTORS';
+          color = '#ff4444';
+        } else if (inRules) {
+          label = 'RULES ONLY';
+          color = 'var(--green)';
+        } else {
+          label = 'ML ONLY';
+          color = '#4488ff';
+        }
+
+        const tr = document.createElement('tr');
+        tr.style.opacity = '0';
+        tr.style.transition = `opacity 0.4s ease ${i * 100}ms`;
+
+        tr.innerHTML = `
+          <td style="border-left:2px solid ${color};padding-left:1rem;color:${color}">${ip}</td>
+          <td><span style="border:1px solid ${color};color:${color};padding:2px 8px;font-size:0.7rem">${label}</span></td>
+          <td style="color:var(--text-dim);font-size:0.75rem">
+            ${inRules ? 'Rule score: ' + (allScores.find(r => r.ip === ip)?.total_score || '—') : ''}
+            ${inML ? ' · ML score: ' + (mlAnomalies.find(r => r.ip === ip)?.anomaly_score || '—') : ''}
+          </td>
+        `;
+
+        tbody.appendChild(tr);
+        setTimeout(() => tr.style.opacity = '1', 50 + i * 100);
+      });
+    }
+
+    // ── Load evaluation metrics ──
+    async function loadEvaluation() {
+      try {
+        const response = await fetch(API + '/api/evaluation');
+        const data = await response.json();
+
+        document.getElementById('rulePrecision').textContent = data.rule_based.precision;
+        document.getElementById('ruleRecall').textContent    = data.rule_based.recall;
+        document.getElementById('ruleF1').textContent        = data.rule_based.f1;
+        document.getElementById('mlPrecision').textContent   = data.ml.precision;
+        document.getElementById('mlRecall').textContent      = data.ml.recall;
+        document.getElementById('mlF1').textContent          = data.ml.f1;
+
+        document.getElementById('modelPerformance').style.display = 'block';
+      } catch (err) {
+        console.log('Evaluation metrics unavailable:', err);
+      }
+    }
+
+      
 
     function openPanel(row) {
       const severityColor = {
