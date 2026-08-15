@@ -617,6 +617,60 @@
         </div>
       </div>
       <div class="text-xs" style="color:var(--text-dim)">
+        <!-- Confusion Matrix -->
+      <div class="grid grid-cols-2 gap-4 mb-6" id="confusionMatrix" style="display:none">
+        <div>
+          <div class="text-xs mb-2" style="color:var(--green)">RULE-BASED DETECTOR</div>
+          <div class="grid grid-cols-2 gap-1">
+            <div id="cmRuleTN" class="p-3 text-center" style="background:#1a472a;border:1px solid #2d6a3f">
+              <div class="text-xl font-bold" style="color:#4ade80" id="ruleTN">—</div>
+              <div class="text-xs mt-1" style="color:#4ade80">TN</div>
+            </div>
+            <div id="cmRuleFP" class="p-3 text-center" style="background:#7f1d1d;border:1px solid #991b1b">
+              <div class="text-xl font-bold" style="color:#f87171" id="ruleFP">—</div>
+              <div class="text-xs mt-1" style="color:#f87171">FP</div>
+            </div>
+            <div id="cmRuleFN" class="p-3 text-center" style="background:#7f1d1d;border:1px solid #991b1b">
+              <div class="text-xl font-bold" style="color:#f87171" id="ruleFN">—</div>
+              <div class="text-xs mt-1" style="color:#f87171">FN</div>
+            </div>
+            <div id="cmRuleTP" class="p-3 text-center" style="background:#1a472a;border:1px solid #2d6a3f">
+              <div class="text-xl font-bold" style="color:#4ade80" id="ruleTP">—</div>
+              <div class="text-xs mt-1" style="color:#4ade80">TP</div>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-1 mt-1">
+            <div class="text-center text-xs" style="color:var(--text-dim)">Predicted Normal</div>
+            <div class="text-center text-xs" style="color:var(--text-dim)">Predicted Attack</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="text-xs mb-2" style="color:#4488ff">ISOLATION FOREST (ML)</div>
+          <div class="grid grid-cols-2 gap-1">
+            <div class="p-3 text-center" style="background:#1a472a;border:1px solid #2d6a3f">
+              <div class="text-xl font-bold" style="color:#4ade80" id="mlTN">—</div>
+              <div class="text-xs mt-1" style="color:#4ade80">TN</div>
+            </div>
+            <div class="p-3 text-center" style="background:#7f1d1d;border:1px solid #991b1b">
+              <div class="text-xl font-bold" style="color:#f87171" id="mlFP">—</div>
+              <div class="text-xs mt-1" style="color:#f87171">FP</div>
+            </div>
+            <div class="p-3 text-center" style="background:#7f1d1d;border:1px solid #991b1b">
+              <div class="text-xl font-bold" style="color:#f87171" id="mlFN">—</div>
+              <div class="text-xs mt-1" style="color:#f87171">FN</div>
+            </div>
+            <div class="p-3 text-center" style="background:#1a472a;border:1px solid #2d6a3f">
+              <div class="text-xl font-bold" style="color:#4ade80" id="mlTP">—</div>
+              <div class="text-xs mt-1" style="color:#4ade80">TP</div>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-1 mt-1">
+            <div class="text-center text-xs" style="color:var(--text-dim)">Predicted Normal</div>
+            <div class="text-center text-xs" style="color:var(--text-dim)">Predicted Attack</div>
+          </div>
+        </div>
+      </div>
         &gt; contamination: <span style="color:var(--green)">0.15</span> &nbsp;·&nbsp;
         &gt; model: <span style="color:var(--green)">IsolationForest(n_estimators=100, random_state=42)</span>
       </div>
@@ -1382,7 +1436,19 @@
         document.getElementById('mlRecall').textContent      = data.ml.recall;
         document.getElementById('mlF1').textContent          = data.ml.f1;
 
+        // Populate confusion matrix
+        document.getElementById('ruleTN').textContent = data.rule_based.tn;
+        document.getElementById('ruleFP').textContent = data.rule_based.fp;
+        document.getElementById('ruleFN').textContent = data.rule_based.fn;
+        document.getElementById('ruleTP').textContent = data.rule_based.tp;
+        document.getElementById('mlTN').textContent   = data.ml.tn;
+        document.getElementById('mlFP').textContent   = data.ml.fp;
+        document.getElementById('mlFN').textContent   = data.ml.fn;
+        document.getElementById('mlTP').textContent   = data.ml.tp;
+
+        document.getElementById('confusionMatrix').style.display = 'grid';
         document.getElementById('modelPerformance').style.display = 'block';
+        
       } catch (err) {
         console.log('Evaluation metrics unavailable:', err);
       }
