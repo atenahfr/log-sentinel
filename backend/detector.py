@@ -4,7 +4,7 @@
 # Each function takes a pandas DataFrame from parser.py and returns
 # a DataFrame of flagged entries with anomaly_type and explanation columns.
 
-
+import re
 def detect_brute_force(df, threshold=10):
     """
     Detects brute force login attacks.
@@ -39,6 +39,11 @@ def detect_brute_force(df, threshold=10):
 
     return flagged
 
+SENSITIVE_PATHS = (
+    '/admin', '/.env', '/config', '/wp-admin', '/wp-login',
+    '/phpmyadmin', '/backup', '/.git', '/etc/passwd',
+)
+_SENSITIVE_RE = '|'.join(re.escape(p) for p in SENSITIVE_PATHS)
 
 def detect_404_spike(df, threshold=10):
     """
@@ -55,7 +60,10 @@ def detect_404_spike(df, threshold=10):
         DataFrame with columns: ip, error_count, anomaly_type, explanation
     """
     # Filter for 404 responses only
-    not_found = df[df['status_code'] == 404]
+    not_found = df[
+        (df['status_code'] == 404) &
+        (df['path'].str.lower().str.contains(_SENSITIVE_RE, regex=True))
+    ]
 
     # Count 404s per IP
     ip_counts = not_found.groupby('ip').size().reset_index(name='error_count')
