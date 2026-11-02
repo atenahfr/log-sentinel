@@ -18,9 +18,8 @@ LOG_PATTERN = re.compile(
     r' (\S+)'                  # group 4: request path (/login, /admin, etc.)
     r' HTTP/\d\.\d"'
     r' (\d+)'                  # group 5: HTTP status code
-    r' (\d+)'                  # group 6: response size in bytes
+    r' (\d+|-)'                # group 6: response size in bytes ("-" = no body)
 )
-
 
 def parse_log_file(filepath):
     """
@@ -47,7 +46,7 @@ def parse_log_file(filepath):
                     'method':      match.group(3),
                     'path':        match.group(4),
                     'status_code': int(match.group(5)),
-                    'bytes':       int(match.group(6)),
+                    'bytes':       0 if match.group(6) == '-' else int(match.group(6)),
                 })
 
     return entries
