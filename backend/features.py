@@ -7,7 +7,7 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 
 
-def build_feature_matrix(df):
+def build_feature_matrix(df, min_requests=5):
     """
     Takes a raw log DataFrame and returns a numeric feature matrix
     with one row per IP address.
@@ -43,6 +43,11 @@ def build_feature_matrix(df):
         avg_bytes=('bytes', 'mean'),
 
     ).reset_index()
+    
+    # Drop IPs with too little activity to judge. With 1-4 requests,
+    # ratios like night_traffic_ratio and error_rate can only take a few
+    # extreme values (0%, 100%) and say almost nothing about behavior.
+    features = features[features['request_count'] >= min_requests].reset_index(drop=True)
 
     # Store IP separately — we need it to map results back later
     ip_list = features['ip'].values
