@@ -143,19 +143,26 @@ def detect_off_hours_traffic(df, std_multiplier=2):
     # Calculate the statistical threshold
     threshold = mean + (std_multiplier * std)
 
-    # Flag hours that exceed the threshold OR fall in the off-hours window
+    # Flag only hours whose traffic exceeds the statistical threshold
     flagged = requests_per_hour[
-        (requests_per_hour['request_count'] > threshold) |
-        (requests_per_hour['hour'] < 6)
+        requests_per_hour['request_count'] > threshold
     ].copy()
 
     flagged['anomaly_type'] = 'off_hours_traffic'
+
+    # Nothing exceeded the threshold: return the empty result early.
+    # (.apply on an empty DataFrame returns a DataFrame, not a column,
+    # and assigning that to a single column raises an error.)
+    if flagged.empty:
+        flagged['explanation'] = []
+        return flagged
+
     flagged['explanation'] = flagged.apply(
         lambda row: (
             f"Hour {row['hour']}:00 had {row['request_count']} requests. "
             f"The daily average is {mean:.1f} requests/hour "
             f"(threshold: {threshold:.1f}). "
-            f"{'This hour falls in the suspicious 2am-6am window.' if row['hour'] < 6 else 'This exceeds the statistical threshold by more than 2 standard deviations.'}"
+            f"This exceeds the statistical threshold by more than {std_multiplier} standard deviations."
         ), axis=1
     )
 

@@ -35,6 +35,12 @@ def generate_report(log_filepath):
 
     # Step 3: score all rule-based anomalies
     scored = score_anomalies(bf, s404, s500, off)
+    
+    # If no rule fired, score_anomalies returns a table with no columns at all.
+    # Give it the columns the rest of this function expects, so that
+    # scored['ip'] works and simply returns zero rows.
+    if scored.empty:
+        scored = pd.DataFrame(columns=['ip', 'total_score'])
 
     # Step 4: run ML detector
     ml_results = detect_ml_anomalies(df, contamination=0.15)
